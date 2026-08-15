@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Вход — T-ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css" />
+<link rel="stylesheet" href="./css/app.css" />
+</head>
+<body>
+
+<div class="auth-screen">
+  <form class="auth-card" id="login-form">
+    <span class="mark">T-ERP</span>
+    <div class="sub" style="color:var(--gray-700); font-size:12.5px; margin-bottom:18px;">
+      Todorov Tees · Business Management
+    </div>
+
+    <div class="form-error" id="login-error"></div>
+
+    <div class="field">
+      <label for="email">Имейл</label>
+      <input id="email" type="email" autocomplete="username" required />
+    </div>
+    <div class="field">
+      <label for="password">Парола</label>
+      <input id="password" type="password" autocomplete="current-password" required />
+    </div>
+
+    <button class="btn primary" type="submit" style="width:100%;" id="login-btn">Вход</button>
+  </form>
+</div>
+
+<script type="module" src="./js/pages/login.js"></script>
+</body>
+</html>
