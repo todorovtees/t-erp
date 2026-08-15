@@ -1,12 +1,9 @@
-name: Deploy frontend to GitHub Pages
+name: Deploy Frontend to GitHub Pages
 
 on:
   push:
-    branches: [main]
-    paths:
-      - "frontend/**"
-      - ".github/workflows/deploy-pages.yml"
-  workflow_dispatch:
+    branches:
+      - main  # Използвай 'main' или 'master' според името на главния ти клон
 
 permissions:
   contents: read
@@ -14,22 +11,27 @@ permissions:
   id-token: write
 
 concurrency:
-  group: pages
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
 
-      - name: Upload frontend/ as Pages artifact
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: frontend
+          # Посочваме папката frontend, за да се вземат нейният index.html и CNAME
+          path: './frontend'
 
       - name: Deploy to GitHub Pages
         id: deployment
