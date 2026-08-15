@@ -1,7 +1,7 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { renderShell } from '../lib/shell.js';
 
-const bgn = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'BGN' });
+const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' });
 
 let companyId = null;
 let categories = [];
@@ -162,7 +162,7 @@ async function loadProducts(search) {
               <span class="stock-dot ${p.total_on_hand <= 0 ? 'out' : (p.total_on_hand <= p.min_stock ? 'low' : 'normal')}"></span>
               ${p.total_on_hand} ${p.unit}
             </td>
-            <td class="mono">${bgn.format(p.sale_price)}</td>
+            <td class="mono">${eur.format(p.sale_price)}</td>
             <td>${p.is_active ? 'Активен' : 'Неактивен'}</td>
           </tr>
         `).join('')}

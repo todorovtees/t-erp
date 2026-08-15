@@ -16,7 +16,7 @@ create table sales (
   operator_id  uuid not null references app_users(id),
   channel      text not null default 'store' check (channel in ('store','website','wholesale','pos','ambassador')),
   status       document_status not null default 'draft',
-  currency     text not null default 'BGN',
+  currency     text not null default 'EUR',
   subtotal     numeric(18,2) not null default 0,
   discount     numeric(18,2) not null default 0,
   vat_total    numeric(18,2) not null default 0,
@@ -48,7 +48,7 @@ create table purchases (
   supplier_id  uuid references suppliers(id),
   operator_id  uuid not null references app_users(id),
   status       document_status not null default 'draft',
-  currency     text not null default 'BGN',
+  currency     text not null default 'EUR',
   total        numeric(18,2) not null default 0,
   created_at   timestamptz not null default now(),
   unique (company_id, document_no)
@@ -74,7 +74,7 @@ create table payments (
   ref_id       uuid not null,
   method       payment_method not null,
   amount       numeric(18,2) not null,
-  currency     text not null default 'BGN',
+  currency     text not null default 'EUR',
   operator_id  uuid references app_users(id),
   created_at   timestamptz not null default now()
 );

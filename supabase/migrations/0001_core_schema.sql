@@ -43,7 +43,7 @@ create table companies (
   eik           text,                 -- ЕИК
   vat_number    text,
   address       text,
-  base_currency text not null default 'BGN',
+  base_currency text not null default 'EUR',
   created_at    timestamptz not null default now()
 );
 
@@ -198,7 +198,7 @@ create table customers (
   phone           text,
   email           citext,
   credit_limit    numeric(18,2) not null default 0,
-  currency        text not null default 'BGN',
+  currency        text not null default 'EUR',
   balance         numeric(18,2) not null default 0,
   created_at      timestamptz not null default now()
 );

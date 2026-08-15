@@ -36,7 +36,7 @@ declare
 begin
   -- 1. Company -----------------------------------------------------------
   insert into companies (name, eik, vat_number, address, base_currency)
-  values ('Todorov Tees Ltd', 'DEMO-EIK', 'BG000000000', 'Sofia, Bulgaria', 'BGN')
+  values ('Todorov Tees Ltd', 'DEMO-EIK', 'BG000000000', 'Sofia, Bulgaria', 'EUR')
   returning id into v_company_id;
 
   -- 2. Warehouses (spec §67) ----------------------------------------------
@@ -146,9 +146,9 @@ begin
 
   -- 7. Customers -------------------------------------------------------------
   insert into customers (company_id, name, company_name, phone, email, credit_limit, currency) values
-    (v_company_id, 'Ivan Petrov', null, '+359888000001', 'ivan@example.com', 0, 'BGN'),
-    (v_company_id, 'Retail Buyer', null, '+359888000002', 'retail@example.com', 0, 'BGN'),
-    (v_company_id, 'Sofia Streetwear OOD', 'Sofia Streetwear OOD', '+359888000003', 'orders@sofiastreetwear.bg', 2000, 'BGN');
+    (v_company_id, 'Ivan Petrov', null, '+359888000001', 'ivan@example.com', 0, 'EUR'),
+    (v_company_id, 'Retail Buyer', null, '+359888000002', 'retail@example.com', 0, 'EUR'),
+    (v_company_id, 'Sofia Streetwear OOD', 'Sofia Streetwear OOD', '+359888000003', 'orders@sofiastreetwear.bg', 2000, 'EUR');
 
   -- 8. Suppliers ---------------------------------------------------------------
   insert into suppliers (company_id, name, phone, email) values

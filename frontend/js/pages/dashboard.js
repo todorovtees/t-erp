@@ -1,8 +1,8 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { renderShell } from '../lib/shell.js';
 
-const bgn = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'BGN' });
-const fmt = (n) => bgn.format(Number(n || 0));
+const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' });
+const fmt = (n) => eur.format(Number(n || 0));
 
 async function main() {
   const shell = await renderShell('dashboard');
