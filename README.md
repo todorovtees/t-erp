@@ -72,7 +72,10 @@ policies don't assume GitHub Pages is the only possible client.
 │       ├── 0002_sales_purchases_payments.sql
 │       ├── 0003_permissions_and_write_policies.sql
 │       ├── 0004_dashboard_and_inventory_view.sql
-│       └── 0005_product_summary_view.sql
+│       ├── 0005_product_summary_view.sql
+│       ├── 0006_purchases_and_cash.sql
+│       ├── 0007_inventory_view_pricing.sql
+│       └── 0008_users_settings_reports.sql
 │
 ├── seed/
 │   └── seed_demo.sql           # Demo data — NOT run automatically, see Setup
@@ -91,8 +94,8 @@ policies don't assume GitHub Pages is the only possible client.
 
 ### 3.1 Run the database migrations
 
-In the Supabase dashboard → **SQL Editor**, run the five files in
-`supabase/migrations/` **in numeric order** (0001 → 0005), each as its own query.
+In the Supabase dashboard → **SQL Editor**, run the eight files in
+`supabase/migrations/` **in numeric order** (0001 → 0008), each as its own query.
 (Equivalently, with the [Supabase CLI](https://supabase.com/docs/guides/cli):
 `supabase link --project-ref nkbpbbumyriecvhjykho` then `supabase db push`.)
 
@@ -208,28 +211,32 @@ GitHub certificate issuance can take anywhere from a few minutes to a few hours.
 
 ## 6. Roadmap
 
-**Built (Phase 1 — foundation):**
+**Built (Phase 1 + 2):**
 Companies · Users/Roles/Permissions · Warehouses · Products & Variants ·
 Barcodes · Inventory (multi-warehouse, 4-level stock status) · atomic stock
-movements · Sales/Payments schema + `complete_sale()` RPC · Customers/Suppliers
-schema · Audit log · Dashboard (KPIs, 14-day sales chart, low-stock, top
-products) · Products/Warehouses/Inventory UI · Login/session handling ·
-GitHub Pages deploy pipeline.
+movements · Dashboard (KPIs, 14-day sales chart, low-stock, top products) ·
+**POS** (barcode/SKU search, cart, checkout via `complete_sale()`) ·
+**Sales** list (filterable) · **Purchases** (receive-stock flow via
+`receive_purchase()`, atomic like `complete_sale()`) · **Customers** /
+**Suppliers** (full CRUD) · **Payments** list · **Cash registers** (open/close
+sessions) · **Reports** (date-range revenue, by-day chart, by-category
+breakdown) · **Users** (role/status management) · **Settings** (company
+profile) · Login/session handling · GitHub Pages deploy pipeline.
 
 **Not yet built** (grouped roughly by spec section):
 
-- **POS screen** (§22–23) — the `complete_sale()` RPC it needs already exists
-- **Sales/Purchases documents UI** — list/detail/create screens (schema exists)
-- **Customers/Suppliers pages**, price lists & individual pricing (§14–18)
 - **Batches, serial numbers, expiration tracking** (§9–11)
 - **Warehouse transfers, inventory count, returns** (§8, §60–61)
-- **Cash registers & banks UI** (§25–26) — schema exists for cash sessions
+- **Price lists & individual customer pricing** (§14–18) — schema not yet
+  added; currently every sale uses `product.sale_price` / `variant.sale_price`
 - **Document templates / PDF generation / thermal receipts** (§30–31) — will
   need an Edge Function, since PDF rendering isn't a SQL-expressible task
 - **Import/export (CSV/XLSX/JSON)** (§32)
-- **Reports module + scheduler** (§34–36, §63)
-- **Users/Roles settings UI** (role_permissions table is fully built; no
-  admin screen to edit it yet)
+- **Report scheduler** (§63)
+- **Creating new login users from the UI** — Supabase Auth's admin API needs
+  the `service_role` key, which must never live in the frontend; new users
+  are created via the Supabase dashboard (see Users page) or a future Edge
+  Function
 - **Notifications (in-app/email/SMS)** (§41–42) — needs an Edge Function
 - **PWA / offline queue** (§44–45)
 - **Fiscal device abstraction layer** (§24)

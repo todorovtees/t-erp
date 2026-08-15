@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>POS — T-ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css" />
+<link rel="stylesheet" href="./css/app.css" />
+<style>
+  .pos-layout { display: grid; grid-template-columns: 1fr 380px; gap: 20px; height: calc(100vh - var(--topbar-h) - 48px); }
+  .pos-search input { width: 100%; font-size: 16px; padding: 12px 14px; border: 1px solid var(--gray-300); border-radius: var(--radius-md); }
+  .pos-results { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; overflow-y: auto; }
+  .pos-tile { border: 1px solid var(--gray-100); border-radius: var(--radius-md); padding: 12px; cursor: pointer; background: var(--paper); }
+  .pos-tile:hover { border-color: var(--ink); }
+  .pos-tile .name { font-size: 13px; font-weight: 500; margin-bottom: 4px; }
+  .pos-tile .meta { font-family: var(--font-mono); font-size: 11px; color: var(--gray-700); }
+  .pos-tile .price { font-family: var(--font-mono); font-size: 14px; margin-top: 6px; }
+  .pos-cart { display: flex; flex-direction: column; background: var(--paper); border: 1px solid var(--gray-100); border-radius: var(--radius-md); overflow: hidden; }
+  .cart-items { flex: 1; overflow-y: auto; padding: 8px; }
+  .cart-line { display: flex; align-items: center; gap: 8px; padding: 8px 6px; border-bottom: 1px solid var(--gray-50); font-size: 12.5px; }
+  .cart-line .qty-btn { width: 22px; height: 22px; border: 1px solid var(--gray-300); background: var(--paper); border-radius: 3px; cursor: pointer; }
+  .cart-footer { border-top: 1px solid var(--gray-100); padding: 14px; }
+  .cart-total { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 20px; font-weight: 600; margin-bottom: 12px; }
+</style>
+</head>
+<body>
+<div class="app-shell" id="app-shell"></div>
+<script type="module" src="./js/pages/pos.js"></script>
+</body>
+</html>
