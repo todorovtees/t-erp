@@ -32,7 +32,7 @@ async function main() {
     <div class="panel" id="new-panel" style="display:none;">
       <div class="panel__header">Нова доставка</div>
       <div style="padding:16px;">
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:14px;">
+        <div class="form-grid-2" style="margin-bottom:14px;">
           <div class="field"><label>Доставчик</label>
             <select id="supplier-select"><option value="">—</option>
               ${(suppliers || []).map(s => `<option value="${s.id}">${s.name}</option>`).join('')}

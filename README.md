@@ -75,7 +75,10 @@ policies don't assume GitHub Pages is the only possible client.
 │       ├── 0005_product_summary_view.sql
 │       ├── 0006_purchases_and_cash.sql
 │       ├── 0007_inventory_view_pricing.sql
-│       └── 0008_users_settings_reports.sql
+│       ├── 0008_users_settings_reports.sql
+│       ├── 0009_void_sale.sql
+│       ├── 0010_expenses.sql
+│       └── 0011_documents.sql
 │
 ├── seed/
 │   └── seed_demo.sql           # Demo data — NOT run automatically, see Setup
@@ -94,8 +97,10 @@ policies don't assume GitHub Pages is the only possible client.
 
 ### 3.1 Run the database migrations
 
-In the Supabase dashboard → **SQL Editor**, run the eight files in
-`supabase/migrations/` **in numeric order** (0001 → 0008), each as its own query.
+In the Supabase dashboard → **SQL Editor**, run the eleven files in
+`supabase/migrations/` **in numeric order** (0001 → 0011), each as its own query.
+Migration `0011` also provisions the private `documents` Storage bucket —
+no manual dashboard step needed for that part.
 (Equivalently, with the [Supabase CLI](https://supabase.com/docs/guides/cli):
 `supabase link --project-ref nkbpbbumyriecvhjykho` then `supabase db push`.)
 
@@ -211,32 +216,44 @@ GitHub certificate issuance can take anywhere from a few minutes to a few hours.
 
 ## 6. Roadmap
 
-**Built (Phase 1 + 2):**
+**Built (Phase 1 + 2 + 3):**
 Companies · Users/Roles/Permissions · Warehouses · Products & Variants ·
 Barcodes · Inventory (multi-warehouse, 4-level stock status) · atomic stock
-movements · Dashboard (KPIs, 14-day sales chart, low-stock, top products) ·
-**POS** (barcode/SKU search, cart, checkout via `complete_sale()`) ·
-**Sales** list (filterable) · **Purchases** (receive-stock flow via
-`receive_purchase()`, atomic like `complete_sale()`) · **Customers** /
-**Suppliers** (full CRUD) · **Payments** list · **Cash registers** (open/close
-sessions) · **Reports** (date-range revenue, by-day chart, by-category
-breakdown) · **Users** (role/status management) · **Settings** (company
-profile) · Login/session handling · GitHub Pages deploy pipeline.
+movements · Dashboard · POS · Sales (list + **Преглед/Печат/Анулирай** —
+void reverses stock atomically and keeps the audit trail instead of a raw
+delete) · Purchases (receive-stock flow) · Customers/Suppliers · Payments ·
+Cash registers · Reports · Users · Settings · **Expenses** (general company
+costs — packaging, supplies, anything not a resale purchase) · **Documents**
+(real file library backed by Supabase Storage, private per company, upload/
+download/delete, categorized) · a shared **print system**
+(`js/lib/print.js` — every "Печат" button opens a clean, purpose-built
+document instead of a raw browser print of the live UI) · **responsive
+redesign** (off-canvas mobile sidebar, tables scroll instead of breaking
+layout, forms reflow to one column under 640px, touch-friendly tap targets).
+
+**On "connecting DevonThink":** not possible directly — DevonThink is a
+local macOS app with no public web API a static GitHub Pages site could call
+into. The Documents module above is the practical equivalent: your own
+private, queryable, backed-up file library, live in the same Supabase
+project as everything else, reachable from any device — not DevonThink
+itself, but it covers the same underlying need (a searchable home for
+invoices, contracts, certificates).
 
 **Not yet built** (grouped roughly by spec section):
 
 - **Batches, serial numbers, expiration tracking** (§9–11)
-- **Warehouse transfers, inventory count, returns** (§8, §60–61)
-- **Price lists & individual customer pricing** (§14–18) — schema not yet
-  added; currently every sale uses `product.sale_price` / `variant.sale_price`
-- **Document templates / PDF generation / thermal receipts** (§30–31) — will
-  need an Edge Function, since PDF rendering isn't a SQL-expressible task
+- **Warehouse transfers, inventory count** (§8, §60)
+- **Returns as a first-class flow** (§61) — voiding a sale gets you most of
+  the way there today; a dedicated partial-return UI is still open
+- **Price lists & individual customer pricing** (§14–18) — every sale
+  currently uses `product.sale_price` / `variant.sale_price` directly
+- **PDF export of the print documents** (currently: formatted HTML print
+  window → browser's own "Save as PDF", not a server-generated PDF file)
 - **Import/export (CSV/XLSX/JSON)** (§32)
 - **Report scheduler** (§63)
-- **Creating new login users from the UI** — Supabase Auth's admin API needs
-  the `service_role` key, which must never live in the frontend; new users
-  are created via the Supabase dashboard (see Users page) or a future Edge
-  Function
+- **Creating new login users from the UI** — needs the `service_role` key,
+  which must never live in the frontend; done via Supabase dashboard or a
+  future Edge Function
 - **Notifications (in-app/email/SMS)** (§41–42) — needs an Edge Function
 - **PWA / offline queue** (§44–45)
 - **Fiscal device abstraction layer** (§24)

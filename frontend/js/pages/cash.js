@@ -29,7 +29,7 @@ async function main() {
 
     <div class="panel" id="new-panel" style="display:none;">
       <div class="panel__header">Нова каса</div>
-      <form id="new-form" style="padding:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px;">
+      <form id="new-form" class="form-grid-2">
         <div class="field"><label>Име *</label><input name="name" required placeholder="Каса 1 — Store Sofia" /></div>
         <div class="field"><label>Склад</label>
           <select name="warehouse_id"><option value="">—</option>

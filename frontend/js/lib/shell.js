@@ -21,6 +21,10 @@ const NAV = [
   { group: 'Финанси', items: [
     { href: 'payments.html', label: 'Плащания', key: 'payments' },
     { href: 'cash.html', label: 'Каси', key: 'cash' },
+    { href: 'expenses.html', label: 'Разходи', key: 'expenses' },
+  ]},
+  { group: 'Документация', items: [
+    { href: 'documents.html', label: 'Документи', key: 'documents' },
   ]},
   { group: 'Система', items: [
     { href: 'reports.html', label: 'Отчети', key: 'reports' },
@@ -58,7 +62,8 @@ export async function renderShell(activeKey) {
   `).join('');
 
   document.getElementById('app-shell').innerHTML = `
-    <aside class="sidebar">
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+    <aside class="sidebar" id="sidebar">
       <div class="sidebar__brand">
         <span class="mark">T-ERP</span>
         <span class="name">Todorov Tees</span>
@@ -67,6 +72,9 @@ export async function renderShell(activeKey) {
     </aside>
     <div>
       <div class="topbar">
+        <button class="hamburger-btn" id="hamburger-btn" aria-label="Меню">
+          <span class="bars"><i></i><i></i><i></i></span>
+        </button>
         <div class="topbar__search">
           <span>Търсене — SKU, баркод, клиент, поръчка…</span>
           <kbd>F2</kbd>
@@ -81,6 +89,14 @@ export async function renderShell(activeKey) {
       <main class="content" id="app-content"></main>
     </div>
   `;
+
+  const sidebar = document.getElementById('sidebar');
+  const backdrop = document.getElementById('sidebar-backdrop');
+  const openSidebar = () => { sidebar.classList.add('open'); backdrop.classList.add('open'); };
+  const closeSidebar = () => { sidebar.classList.remove('open'); backdrop.classList.remove('open'); };
+  document.getElementById('hamburger-btn').addEventListener('click', openSidebar);
+  backdrop.addEventListener('click', closeSidebar);
+  sidebar.querySelectorAll('.nav-link').forEach(link => link.addEventListener('click', closeSidebar));
 
   document.getElementById('logout-btn').addEventListener('click', async () => {
     await supabase.auth.signOut();

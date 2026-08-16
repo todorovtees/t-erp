@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Документи — T-ERP</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="./css/tokens.css" />
+<link rel="stylesheet" href="./css/app.css" />
+<style>
+  .dropzone {
+    border: 2px dashed var(--gray-300); border-radius: var(--radius-md);
+    padding: 28px; text-align: center; color: var(--gray-700); font-size: 13px;
+    cursor: pointer; transition: border-color 0.15s ease, background 0.15s ease;
+  }
+  .dropzone.drag { border-color: var(--accent); background: var(--gray-50); }
+</style>
+</head>
+<body>
+<div class="app-shell" id="app-shell"></div>
+<script type="module" src="./js/pages/documents.js"></script>
+</body>
+</html>

@@ -18,7 +18,31 @@
   top: 0;
   height: 100vh;
   overflow-y: auto;
+  transition: transform 0.22s ease;
 }
+
+.sidebar-backdrop {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  z-index: 40;
+}
+
+.hamburger-btn {
+  display: none;
+  width: 34px; height: 34px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.hamburger-btn span, .hamburger-btn::before, .hamburger-btn::after { display: none; }
+.hamburger-btn .bars { display: flex; flex-direction: column; gap: 3px; width: 16px; }
+.hamburger-btn .bars i { display: block; height: 2px; background: var(--ink); border-radius: 1px; }
 
 .sidebar__brand {
   display: flex;
@@ -89,7 +113,7 @@
   background: var(--paper);
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 12px;
   padding: 0 20px;
   position: sticky;
   top: 0;
@@ -98,6 +122,7 @@
 
 .topbar__search {
   flex: 1;
+  min-width: 0;
   max-width: 420px;
   display: flex;
   align-items: center;
@@ -108,7 +133,9 @@
   padding: 7px 10px;
   color: var(--gray-700);
   font-size: 13px;
+  overflow: hidden;
 }
+.topbar__search span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .topbar__search kbd {
   margin-left: auto;
@@ -147,6 +174,8 @@
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 20px;
 }
 
@@ -194,22 +223,26 @@
   background: var(--paper);
   border: 1px solid var(--gray-100);
   border-radius: var(--radius-md);
+  box-shadow: 0 1px 2px rgba(20, 21, 26, 0.04);
   margin-bottom: 20px;
+  overflow-x: auto;
 }
 
 .panel__header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
   border-bottom: 1px solid var(--gray-100);
   font-weight: 600;
   font-size: 13.5px;
+  gap: 10px;
 }
 
 /* ---- Table -------------------------------------------------------------------- */
 
-table.data { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.data { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 13px; }
 table.data th {
   text-align: left;
   font-family: var(--font-mono);
@@ -240,11 +273,19 @@ table.data tr:hover td { background: var(--gray-50); }
   border: 1px solid var(--gray-300);
   background: var(--paper);
   cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, opacity 0.15s ease;
 }
 .btn:hover { border-color: var(--gray-700); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn:disabled:hover { border-color: var(--gray-300); }
 .btn.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 .btn.primary:hover { background: #000; }
 .btn.accent { background: var(--accent); color: var(--ink); border-color: var(--accent); }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: var(--paper); }
+.btn.danger:hover { background: var(--bad); color: var(--paper); }
+.btn.sm { padding: 5px 9px; font-size: 12px; }
+
+.action-row { display: flex; gap: 6px; flex-wrap: wrap; }
 
 /* ---- Auth screen --------------------------------------------------------------- */
 
@@ -282,15 +323,47 @@ table.data tr:hover td { background: var(--gray-50); }
   color: var(--gray-700);
   margin-bottom: 5px;
 }
-.field input {
+.field input, .field select {
   width: 100%;
   font-family: var(--font-ui);
   font-size: 14px;
   padding: 9px 10px;
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
 }
-.field input:focus { border-color: var(--ink); }
+.field input:focus, .field select:focus { border-color: var(--ink); }
+
+select {
+  font-family: var(--font-ui);
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+/* ---- Modal (used by "Преглед" / detail views) ---------------------------------- */
+
+.modal-backdrop {
+  position: fixed; inset: 0;
+  background: rgba(20, 21, 26, 0.55);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding: 40px 16px;
+  overflow-y: auto;
+  z-index: 60;
+}
+.modal-card {
+  background: var(--paper);
+  border-radius: var(--radius-md);
+  width: 100%; max-width: 640px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.25);
+}
+.modal-card .panel__header { border-radius: var(--radius-md) var(--radius-md) 0 0; }
+.modal-close { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--gray-700); line-height: 1; }
+.modal-close:hover { color: var(--ink); }
 
 .form-error {
   font-size: 12.5px;
@@ -300,7 +373,44 @@ table.data tr:hover td { background: var(--gray-50); }
 }
 .form-error.show { display: block; }
 
+/* ---- Print safety net --------------------------------------------------------
+   Document printing (receipts, inventory lists) opens a dedicated print
+   window with its own markup — see js/lib/print.js. This is just a fallback
+   so a stray Ctrl/Cmd+P on the app itself doesn't print a broken sidebar. */
+@media print {
+  .sidebar, .topbar, .sidebar-backdrop, .btn, .action-row { display: none !important; }
+  .app-shell { display: block; }
+  .content { padding: 0; }
+}
+
+/* ---- Responsive breakpoints ---------------------------------------------------- */
+
 @media (max-width: 900px) {
   .app-shell { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
+
+  .sidebar {
+    position: fixed;
+    top: 0; left: 0;
+    width: min(84vw, 280px);
+    height: 100vh;
+    transform: translateX(-100%);
+    z-index: 50;
+  }
+  .sidebar.open { transform: translateX(0); }
+  .sidebar-backdrop.open { display: block; }
+
+  .hamburger-btn { display: flex; }
+
+  .content { padding: 16px 16px 48px; }
+  .topbar { padding: 0 14px; }
+  .topbar__user span:not(.avatar) { display: none; } /* keep just the avatar on very small screens */
+
+  .kpi-card .value { font-size: 20px; }
+
+  .pos-layout { grid-template-columns: 1fr !important; height: auto !important; }
+  .pos-cart { max-height: 60vh; }
+}
+
+@media (max-width: 480px) {
+  .page-header .btn, .page-header a.btn { width: 100%; text-align: center; }
 }

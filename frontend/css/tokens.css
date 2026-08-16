@@ -51,6 +51,19 @@ html, body {
 
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
+/* Responsive form grids: fixed column counts on desktop, single column once
+   the viewport gets tight (phones, and narrow desktop windows alike). */
+.form-grid-2, .form-grid-3 {
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+.form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+.form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 640px) {
+  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+}
+
 a { color: inherit; }
 
 ::selection { background: var(--accent); color: var(--ink); }

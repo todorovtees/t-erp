@@ -27,7 +27,7 @@ async function main() {
 
     <div class="panel" id="new-product-panel" style="display:none;">
       <div class="panel__header">Нов продукт</div>
-      <form id="new-product-form" style="padding:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+      <form id="new-product-form" class="form-grid-3">
         <div class="field"><label>SKU *</label><input name="sku" required placeholder="TT-CORE" /></div>
         <div class="field" style="grid-column:span 2;"><label>Име *</label><input name="name" required placeholder="Todorov Tees Core T-Shirt" /></div>
         <div class="field">

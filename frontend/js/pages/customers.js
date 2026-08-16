@@ -23,7 +23,7 @@ async function main() {
 
     <div class="panel" id="new-panel" style="display:none;">
       <div class="panel__header">Нов клиент</div>
-      <form id="new-form" style="padding:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+      <form id="new-form" class="form-grid-3">
         <div class="field"><label>Име *</label><input name="name" required /></div>
         <div class="field"><label>Фирма</label><input name="company_name" /></div>
         <div class="field"><label>ЕИК</label><input name="eik" /></div>

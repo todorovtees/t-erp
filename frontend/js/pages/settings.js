@@ -27,7 +27,7 @@ async function main() {
 
     <div class="panel">
       <div class="panel__header">Фирмени данни</div>
-      <form id="company-form" style="padding:16px; display:grid; grid-template-columns:repeat(2,1fr); gap:12px; max-width:640px;">
+      <form id="company-form" class="form-grid-2" style="max-width:640px;">
         <div class="field"><label>Име на фирмата</label><input name="name" value="${company.name || ''}" required /></div>
         <div class="field"><label>ЕИК</label><input name="eik" value="${company.eik || ''}" /></div>
         <div class="field"><label>ДДС номер</label><input name="vat_number" value="${company.vat_number || ''}" /></div>

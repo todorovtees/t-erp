@@ -22,7 +22,7 @@ async function main() {
 
     <div class="panel" id="new-wh-panel" style="display:none;">
       <div class="panel__header">Нов склад</div>
-      <form id="new-wh-form" style="padding:16px; display:grid; grid-template-columns:repeat(3,1fr); gap:12px;">
+      <form id="new-wh-form" class="form-grid-3">
         <div class="field"><label>Код *</label><input name="code" required placeholder="STR-VAR" /></div>
         <div class="field" style="grid-column:span 2;"><label>Име *</label><input name="name" required placeholder="Store Varna" /></div>
         <div class="field" style="grid-column:span 2;"><label>Адрес</label><input name="address" /></div>

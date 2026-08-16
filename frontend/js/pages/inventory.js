@@ -1,8 +1,10 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { renderShell } from '../lib/shell.js';
+import { printDocument } from '../lib/print.js';
 
 let companyId = null;
 let warehouses = [];
+let currentRows = [];
 
 const STATUS_LABEL = { normal: 'Нормална', low: 'Ниска', critical: 'Критична', out: 'Изчерпана' };
 
@@ -23,6 +25,7 @@ async function main() {
   content.innerHTML = `
     <div class="page-header">
       <div><h1>Наличности</h1><div class="sub">На ниво продукт-вариант, по склад</div></div>
+      <button class="btn accent" id="print-btn">🖨 Печат</button>
     </div>
 
     <div class="panel">
@@ -48,6 +51,7 @@ async function main() {
   document.getElementById('search-box').addEventListener('input', () => loadInventory());
   document.getElementById('wh-filter').addEventListener('change', () => loadInventory());
   document.getElementById('status-filter').addEventListener('change', () => loadInventory());
+  document.getElementById('print-btn').addEventListener('click', printInventory);
 
   await loadInventory();
 }
@@ -71,6 +75,7 @@ async function loadInventory() {
   const { data, error } = await query;
 
   if (error) { mount.innerHTML = `<div style="padding:20px;">Грешка: ${error.message}</div>`; return; }
+  currentRows = data;
   if (!data.length) { mount.innerHTML = `<div style="padding:20px; color:var(--gray-700); font-size:13px;">Няма резултати.</div>`; return; }
 
   mount.innerHTML = `
@@ -95,6 +100,37 @@ async function loadInventory() {
         `).join('')}
       </tbody>
     </table>`;
+}
+
+function printInventory() {
+  const wh = document.getElementById('wh-filter');
+  const whLabel = wh.value ? wh.options[wh.selectedIndex].text : 'Всички складове';
+
+  printDocument({
+    documentTitle: 'Справка наличности',
+    subtitle: whLabel,
+    meta: [
+      { label: 'Генерирано на', value: new Date().toLocaleString('bg-BG') },
+      { label: 'Артикули', value: String(currentRows.length) },
+    ],
+    columns: [
+      { key: 'product_name', label: 'Продукт' },
+      { key: 'sku', label: 'SKU' },
+      { key: 'warehouse_name', label: 'Склад' },
+      { key: 'on_hand', label: 'На склад', align: 'right' },
+      { key: 'available', label: 'Свободно', align: 'right' },
+      { key: 'status', label: 'Статус' },
+    ],
+    rows: currentRows.map(r => ({
+      product_name: r.product_name,
+      sku: r.sku,
+      warehouse_name: r.warehouse_name,
+      on_hand: r.on_hand,
+      available: r.available,
+      status: STATUS_LABEL[r.stock_status],
+    })),
+    footerNote: `Отпечатано на ${new Date().toLocaleString('bg-BG')} от T-ERP · Todorov Tees`,
+  });
 }
 
 main();
