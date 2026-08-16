@@ -50,6 +50,14 @@ async function main() {
         <div class="field"><label>Покупна цена</label><input name="purchase_price" type="number" step="0.01" value="0" /></div>
         <div class="field"><label>Продажна цена *</label><input name="sale_price" type="number" step="0.01" required /></div>
         <div class="field"><label>Мин. наличност</label><input name="min_stock" type="number" step="1" value="0" /></div>
+        <div class="field" style="display:flex; align-items:center; gap:16px; padding-top:22px;">
+          <label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:13px;">
+            <input type="checkbox" name="track_batches" style="width:auto;" /> Партиди/годност
+          </label>
+          <label style="display:flex; align-items:center; gap:5px; font-weight:400; font-size:13px;">
+            <input type="checkbox" name="track_serials" style="width:auto;" /> Сериен номер
+          </label>
+        </div>
         <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center;">
           <button class="btn primary" type="submit">Запази продукт</button>
           <button class="btn" type="button" id="cancel-new-product">Отказ</button>
@@ -101,6 +109,8 @@ async function handleCreateProduct(e) {
     purchase_price: Number(fd.get('purchase_price')),
     sale_price: Number(fd.get('sale_price')),
     min_stock: Number(fd.get('min_stock')),
+    track_batches: fd.get('track_batches') === 'on',
+    track_serials: fd.get('track_serials') === 'on',
   };
 
   const { data: product, error: prodErr } = await supabase

@@ -3,6 +3,7 @@ import { renderShell } from '../lib/shell.js';
 
 const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' });
 let companyId = null;
+let priceLists = [];
 
 async function main() {
   const shell = await renderShell('customers');
@@ -14,6 +15,9 @@ async function main() {
     return;
   }
   companyId = profile.company_id;
+
+  const { data: pls } = await supabase.from('price_lists').select('id, name').eq('company_id', companyId).order('name');
+  priceLists = pls || [];
 
   content.innerHTML = `
     <div class="page-header">
@@ -30,6 +34,11 @@ async function main() {
         <div class="field"><label>Телефон</label><input name="phone" /></div>
         <div class="field"><label>Имейл</label><input name="email" type="email" /></div>
         <div class="field"><label>Кредитен лимит</label><input name="credit_limit" type="number" step="0.01" value="0" /></div>
+        <div class="field"><label>Ценова листа</label>
+          <select name="price_list_id"><option value="">По подразбиране</option>
+            ${priceLists.map(p => `<option value="${p.id}">${p.name}</option>`).join('')}
+          </select>
+        </div>
         <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center;">
           <button class="btn primary" type="submit">Запази клиент</button>
           <button class="btn" type="button" id="cancel-btn">Отказ</button>
@@ -70,6 +79,7 @@ async function handleCreate(e) {
     phone: fd.get('phone') || null,
     email: fd.get('email') || null,
     credit_limit: Number(fd.get('credit_limit')),
+    price_list_id: fd.get('price_list_id') || null,
   });
 
   if (error) { errBox.textContent = 'Грешка: ' + error.message; return; }

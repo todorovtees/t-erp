@@ -8,11 +8,16 @@ const NAV = [
     { href: 'products.html', label: 'Продукти', key: 'products' },
     { href: 'inventory.html', label: 'Наличности', key: 'inventory' },
     { href: 'warehouses.html', label: 'Складове', key: 'warehouses' },
+    { href: 'transfers.html', label: 'Трансфери', key: 'transfers' },
+    { href: 'counts.html', label: 'Инвентаризация', key: 'counts' },
+    { href: 'batches.html', label: 'Партиди / Годност', key: 'batches' },
+    { href: 'serials.html', label: 'Серийни номера', key: 'serials' },
   ]},
   { group: 'Търговия', items: [
     { href: 'sales.html', label: 'Продажби', key: 'sales' },
     { href: 'pos.html', label: 'POS', key: 'pos', tag: 'F10' },
     { href: 'purchases.html', label: 'Покупки', key: 'purchases' },
+    { href: 'price-lists.html', label: 'Ценови листи', key: 'price-lists' },
   ]},
   { group: 'Контакти', items: [
     { href: 'customers.html', label: 'Клиенти', key: 'customers' },

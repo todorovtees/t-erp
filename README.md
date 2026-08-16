@@ -97,8 +97,8 @@ policies don't assume GitHub Pages is the only possible client.
 
 ### 3.1 Run the database migrations
 
-In the Supabase dashboard → **SQL Editor**, run the eleven files in
-`supabase/migrations/` **in numeric order** (0001 → 0011), each as its own query.
+In the Supabase dashboard → **SQL Editor**, run the seventeen files in
+`supabase/migrations/` **in numeric order** (0001 → 0017), each as its own query.
 Migration `0011` also provisions the private `documents` Storage bucket —
 no manual dashboard step needed for that part.
 (Equivalently, with the [Supabase CLI](https://supabase.com/docs/guides/cli):
@@ -216,49 +216,46 @@ GitHub certificate issuance can take anywhere from a few minutes to a few hours.
 
 ## 6. Roadmap
 
-**Built (Phase 1 + 2 + 3):**
+**Built (Phase 1 through 4):**
 Companies · Users/Roles/Permissions · Warehouses · Products & Variants ·
 Barcodes · Inventory (multi-warehouse, 4-level stock status) · atomic stock
-movements · Dashboard · POS · Sales (list + **Преглед/Печат/Анулирай** —
-void reverses stock atomically and keeps the audit trail instead of a raw
-delete) · Purchases (receive-stock flow) · Customers/Suppliers · Payments ·
-Cash registers · Reports · Users · Settings · **Expenses** (general company
-costs — packaging, supplies, anything not a resale purchase) · **Documents**
-(real file library backed by Supabase Storage, private per company, upload/
-download/delete, categorized) · a shared **print system**
-(`js/lib/print.js` — every "Печат" button opens a clean, purpose-built
-document instead of a raw browser print of the live UI) · **responsive
-redesign** (off-canvas mobile sidebar, tables scroll instead of breaking
-layout, forms reflow to one column under 640px, touch-friendly tap targets).
+movements · Dashboard · POS (customer selection, price-list-aware pricing,
+serial capture) · Sales (Преглед/Печат/Анулирай) · Purchases (batch +
+serial capture on receipt) · Customers/Suppliers · Payments · Cash
+registers · Reports · Users · Settings · Expenses · Documents (Supabase
+Storage) · shared print system · responsive redesign · **Batches +
+FEFO** (§9) · **Expiration tracking** (§11) · **Serial numbers** (§10,
+full lifecycle: received → sold → voided-back-to-stock) ·
+**Warehouse transfers** (§8, Draft→Sent→Received, atomic) ·
+**Inventory count** (§60, snapshot → count → approve → adjustment) ·
+**Price lists + per-customer pricing** (§14–15, quantity tiers, resolved
+via `resolve_price()`).
 
 **On "connecting DevonThink":** not possible directly — DevonThink is a
 local macOS app with no public web API a static GitHub Pages site could call
-into. The Documents module above is the practical equivalent: your own
-private, queryable, backed-up file library, live in the same Supabase
-project as everything else, reachable from any device — not DevonThink
-itself, but it covers the same underlying need (a searchable home for
-invoices, contracts, certificates).
+into. The Documents module is the practical equivalent: your own private,
+queryable, backed-up file library in the same Supabase project as
+everything else.
 
-**Not yet built** (grouped roughly by spec section):
+**Not yet built:**
 
-- **Batches, serial numbers, expiration tracking** (§9–11)
-- **Warehouse transfers, inventory count** (§8, §60)
 - **Returns as a first-class flow** (§61) — voiding a sale gets you most of
-  the way there today; a dedicated partial-return UI is still open
-- **Price lists & individual customer pricing** (§14–18) — every sale
-  currently uses `product.sale_price` / `variant.sale_price` directly
-- **PDF export of the print documents** (currently: formatted HTML print
-  window → browser's own "Save as PDF", not a server-generated PDF file)
+  the way there; a dedicated *partial*-return UI is still open
+- **PDF export of the print documents** — currently: formatted HTML print
+  window → browser's own "Save as PDF", not a server-generated PDF file
 - **Import/export (CSV/XLSX/JSON)** (§32)
-- **Report scheduler** (§63)
+- **Report scheduler** (§63) — needs `pg_cron` + an email-sending Edge Function
 - **Creating new login users from the UI** — needs the `service_role` key,
   which must never live in the frontend; done via Supabase dashboard or a
   future Edge Function
 - **Notifications (in-app/email/SMS)** (§41–42) — needs an Edge Function
 - **PWA / offline queue** (§44–45)
-- **Fiscal device abstraction layer** (§24)
+- **Fiscal device abstraction layer** (§24) — no real hardware to build
+  against; would ship as an unimplemented interface stub, low value on its own
+- **Add/Edit/Delete UI polish** for Customers/Suppliers/Warehouses/Products —
+  they currently support Add + list, not yet inline edit/delete (Sales
+  already has the full View/Print/Void treatment; Expenses has Delete)
 
-None of this is blocked architecturally — it's the same pattern as what's
-already built (a table + RLS policies + a page that queries it, or a
-`SECURITY DEFINER` RPC for anything that needs atomicity). Tell me which
-module to build next and I'll continue in the same style.
+None of this is blocked architecturally — same pattern as everything above:
+a table + RLS policies + a page, or a `SECURITY DEFINER` RPC for anything
+needing atomicity. Tell me which module to build next.

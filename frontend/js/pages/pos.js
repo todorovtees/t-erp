@@ -6,7 +6,8 @@ const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' 
 let companyId = null;
 let operatorId = null;
 let warehouseId = null;
-let cart = []; // [{variant_id, sku, name, color, size, quantity, unit_price, vat_rate}]
+let customerId = null;
+let cart = []; // [{variant_id, name, meta, quantity, unit_price, vat_rate, available, trackSerials, serials}]
 
 async function main() {
   const shell = await renderShell('pos');
@@ -20,7 +21,11 @@ async function main() {
   companyId = profile.company_id;
   operatorId = shell.session.user.id;
 
-  const { data: whs } = await supabase.from('warehouses').select('id, name').eq('company_id', companyId).order('name');
+  const [{ data: whs }, { data: customers }] = await Promise.all([
+    supabase.from('warehouses').select('id, name').eq('company_id', companyId).order('name'),
+    supabase.from('customers').select('id, name').eq('company_id', companyId).order('name'),
+  ]);
+
   if (!whs || !whs.length) {
     content.innerHTML = `<div class="panel"><div class="panel__header">Няма складове</div>
       <div style="padding:20px;">Създай поне един склад от страница "Складове", преди да продаваш.</div></div>`;
@@ -31,9 +36,15 @@ async function main() {
   content.innerHTML = `
     <div class="page-header">
       <div><h1>POS</h1><div class="sub">Продажба на място</div></div>
-      <select id="wh-select" style="border:1px solid var(--gray-300); border-radius:4px; padding:8px 10px; font-size:13px;">
-        ${whs.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
-      </select>
+      <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <select id="customer-select" style="border:1px solid var(--gray-300); border-radius:4px; padding:8px 10px; font-size:13px;">
+          <option value="">Без клиент (стандартни цени)</option>
+          ${(customers || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+        </select>
+        <select id="wh-select" style="border:1px solid var(--gray-300); border-radius:4px; padding:8px 10px; font-size:13px;">
+          ${whs.map(w => `<option value="${w.id}">${w.name}</option>`).join('')}
+        </select>
+      </div>
     </div>
 
     <div class="pos-layout">
@@ -64,6 +75,10 @@ async function main() {
   `;
 
   document.getElementById('wh-select').addEventListener('change', (e) => { warehouseId = e.target.value; runSearch(''); });
+  document.getElementById('customer-select').addEventListener('change', async (e) => {
+    customerId = e.target.value || null;
+    await repriceCart();
+  });
   document.getElementById('pos-search').addEventListener('input', (e) => runSearch(e.target.value));
   document.getElementById('checkout-btn').addEventListener('click', checkout);
 
@@ -79,7 +94,7 @@ async function runSearch(term) {
   const mount = document.getElementById('pos-results');
   let query = supabase
     .from('v_inventory_detail')
-    .select('variant_id, product_name, sku, color, size, barcode, sale_price, vat_rate, available')
+    .select('variant_id, product_name, sku, color, size, barcode, sale_price, vat_rate, available, track_serials')
     .eq('company_id', companyId)
     .eq('warehouse_id', warehouseId)
     .gt('available', 0)
@@ -95,7 +110,7 @@ async function runSearch(term) {
   mount.innerHTML = data.map(v => `
     <div class="pos-tile" data-id="${v.variant_id}">
       <div class="name">${v.product_name}</div>
-      <div class="meta">${[v.color, v.size].filter(Boolean).join(' / ') || v.sku} · на склад: ${v.available}</div>
+      <div class="meta">${[v.color, v.size].filter(Boolean).join(' / ') || v.sku} · на склад: ${v.available}${v.track_serials ? ' · 🔖 сериен №' : ''}</div>
       <div class="price">${eur.format(v.sale_price)}</div>
     </div>
   `).join('');
@@ -108,20 +123,61 @@ async function runSearch(term) {
   });
 }
 
-function addToCart(v) {
+async function addToCart(v) {
+  if (v.track_serials) {
+    const serial = prompt(`Сериен номер за ${v.product_name} (${v.sku}):`);
+    if (!serial || !serial.trim()) return;
+
+    const existing = cart.find(c => c.variant_id === v.variant_id);
+    const price = customerId ? await fetchResolvedPrice(v.variant_id, (existing?.quantity || 0) + 1) : Number(v.sale_price);
+
+    if (existing) {
+      existing.quantity += 1;
+      existing.serials.push(serial.trim());
+      existing.unit_price = price;
+    } else {
+      cart.push({
+        variant_id: v.variant_id, name: v.product_name,
+        meta: [v.color, v.size].filter(Boolean).join(' / ') || v.sku,
+        quantity: 1, unit_price: price, vat_rate: Number(v.vat_rate), available: v.available,
+        trackSerials: true, serials: [serial.trim()],
+      });
+    }
+    renderCart();
+    return;
+  }
+
   const existing = cart.find(c => c.variant_id === v.variant_id);
   if (existing) {
-    if (existing.quantity < v.available) existing.quantity += 1;
+    if (existing.quantity < v.available) {
+      existing.quantity += 1;
+      if (customerId) existing.unit_price = await fetchResolvedPrice(v.variant_id, existing.quantity);
+    }
   } else {
+    const price = customerId ? await fetchResolvedPrice(v.variant_id, 1) : Number(v.sale_price);
     cart.push({
-      variant_id: v.variant_id,
-      name: v.product_name,
+      variant_id: v.variant_id, name: v.product_name,
       meta: [v.color, v.size].filter(Boolean).join(' / ') || v.sku,
-      quantity: 1,
-      unit_price: Number(v.sale_price),
-      vat_rate: Number(v.vat_rate),
-      available: v.available,
+      quantity: 1, unit_price: price, vat_rate: Number(v.vat_rate), available: v.available,
+      trackSerials: false, serials: [],
     });
+  }
+  renderCart();
+}
+
+async function fetchResolvedPrice(variantId, quantity) {
+  const { data, error } = await supabase.rpc('resolve_price', {
+    p_variant_id: variantId, p_customer_id: customerId, p_quantity: quantity,
+  });
+  return error ? null : Number(data);
+}
+
+async function repriceCart() {
+  for (const line of cart) {
+    if (customerId) {
+      const price = await fetchResolvedPrice(line.variant_id, line.quantity);
+      if (price !== null) line.unit_price = price;
+    }
   }
   renderCart();
 }
@@ -142,22 +198,26 @@ function renderCart() {
       <div style="flex:1;">
         <div>${c.name}</div>
         <div class="mono" style="color:var(--gray-700); font-size:11px;">${c.meta} · ${eur.format(c.unit_price)}</div>
+        ${c.trackSerials ? `<div class="mono" style="color:var(--gray-700); font-size:10px;">SN: ${c.serials.join(', ')}</div>` : ''}
       </div>
-      <button class="qty-btn" data-i="${i}" data-d="-1">−</button>
-      <span class="mono">${c.quantity}</span>
-      <button class="qty-btn" data-i="${i}" data-d="1">+</button>
+      ${c.trackSerials
+        ? '' /* quantity for serialized items is driven by how many serials were scanned, not +/- */
+        : `<button class="qty-btn" data-i="${i}" data-d="-1">−</button><span class="mono">${c.quantity}</span><button class="qty-btn" data-i="${i}" data-d="1">+</button>`}
       <button class="qty-btn" data-i="${i}" data-remove="1">✕</button>
     </div>
   `).join('');
 
   mount.querySelectorAll('[data-d]').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       const i = Number(btn.dataset.i);
       const d = Number(btn.dataset.d);
       const line = cart[i];
       const next = line.quantity + d;
       if (next <= 0) { cart.splice(i, 1); }
-      else if (next <= line.available) { line.quantity = next; }
+      else if (next <= line.available) {
+        line.quantity = next;
+        if (customerId) line.unit_price = await fetchResolvedPrice(line.variant_id, next);
+      }
       renderCart();
     });
   });
@@ -187,6 +247,7 @@ async function checkout() {
 
   const items = cart.map(c => ({
     variant_id: c.variant_id, quantity: c.quantity, unit_price: c.unit_price, discount: 0, vat_rate: c.vat_rate,
+    ...(c.trackSerials ? { serials: c.serials } : {}),
   }));
   const payments = [{ method: document.getElementById('pay-method').value, amount: Math.round(total * 100) / 100 }];
   const documentNo = 'POS-' + Date.now();
@@ -194,7 +255,7 @@ async function checkout() {
   const { error } = await supabase.rpc('complete_sale', {
     p_company_id: companyId,
     p_warehouse_id: warehouseId,
-    p_customer_id: null,
+    p_customer_id: customerId,
     p_operator_id: operatorId,
     p_channel: 'pos',
     p_document_no: documentNo,

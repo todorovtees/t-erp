@@ -86,7 +86,7 @@ async function searchProducts(term) {
 
   const { data, error } = await supabase
     .from('product_variants')
-    .select('id, sku, color, size, sale_price, products!inner(id, name, company_id, purchase_price)')
+    .select('id, sku, color, size, sale_price, products!inner(id, name, company_id, purchase_price, track_batches, track_serials)')
     .eq('products.company_id', companyId)
     .or(`sku.ilike.%${term}%`)
     .limit(15);
@@ -120,6 +120,10 @@ function addLine(v) {
       meta: [v.color, v.size].filter(Boolean).join('/') || v.sku,
       quantity: 1,
       unit_cost: Number(v.products.purchase_price || 0),
+      trackBatches: v.products.track_batches,
+      trackSerials: v.products.track_serials,
+      batchNo: '', mfgDate: '', expiryDate: '',
+      serialsText: '',
     });
   }
   renderLines();
@@ -130,18 +134,44 @@ function renderLines() {
   const submitBtn = document.getElementById('submit-btn');
   mount.innerHTML = lines.map((l, i) => `
     <tr>
-      <td>${l.name}<br><span class="mono" style="font-size:11px; color:var(--gray-700);">${l.meta}</span></td>
+      <td>${l.name}<br><span class="mono" style="font-size:11px; color:var(--gray-700);">${l.meta}</span>
+        ${l.trackBatches ? '<br><span class="mono" style="font-size:10px; color:var(--accent-ink);">изисква партида</span>' : ''}
+        ${l.trackSerials ? '<br><span class="mono" style="font-size:10px; color:var(--accent-ink);">изисква сериен №</span>' : ''}
+      </td>
       <td><input type="number" min="1" step="1" value="${l.quantity}" data-i="${i}" data-f="quantity" style="width:70px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" /></td>
       <td><input type="number" min="0" step="0.01" value="${l.unit_cost}" data-i="${i}" data-f="unit_cost" style="width:90px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" /></td>
       <td class="mono">${eur.format(l.quantity * l.unit_cost)}</td>
       <td><button class="btn" data-remove="${i}" style="padding:4px 8px;">✕</button></td>
     </tr>
+    ${l.trackBatches ? `
+    <tr>
+      <td colspan="5" style="background:var(--gray-50); padding:8px;">
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; font-size:12px;">
+          <span style="color:var(--gray-700);">Партида:</span>
+          <input placeholder="Партиден №" value="${l.batchNo}" data-i="${i}" data-f="batchNo" style="width:120px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" />
+          <input type="date" title="Дата на производство" value="${l.mfgDate}" data-i="${i}" data-f="mfgDate" style="border:1px solid var(--gray-300); border-radius:3px; padding:4px;" />
+          <span style="color:var(--gray-700);">→</span>
+          <input type="date" title="Годна до" value="${l.expiryDate}" data-i="${i}" data-f="expiryDate" style="border:1px solid var(--gray-300); border-radius:3px; padding:4px;" />
+        </div>
+      </td>
+    </tr>` : ''}
+    ${l.trackSerials ? `
+    <tr>
+      <td colspan="5" style="background:var(--gray-50); padding:8px;">
+        <div style="font-size:12px; color:var(--gray-700); margin-bottom:4px;">
+          Серийни номера (по един на ред, трябва да съвпада с количеството — ${l.quantity} бр.):
+        </div>
+        <textarea data-i="${i}" data-f="serialsText" rows="2" style="width:100%; border:1px solid var(--gray-300); border-radius:3px; padding:6px; font-family:var(--font-mono); font-size:12px;">${l.serialsText}</textarea>
+      </td>
+    </tr>` : ''}
   `).join('');
 
-  mount.querySelectorAll('input').forEach(inp => {
+  mount.querySelectorAll('input, textarea').forEach(inp => {
     inp.addEventListener('input', () => {
-      lines[Number(inp.dataset.i)][inp.dataset.f] = Number(inp.value);
-      renderLines();
+      const field = inp.dataset.f;
+      const i = Number(inp.dataset.i);
+      lines[i][field] = (field === 'quantity' || field === 'unit_cost') ? Number(inp.value) : inp.value;
+      if (field === 'quantity' || field === 'unit_cost') renderLines();
     });
   });
   mount.querySelectorAll('[data-remove]').forEach(btn => {
@@ -161,13 +191,29 @@ async function submitPurchase() {
 
   if (!warehouseId) { errBox.textContent = 'Избери склад.'; return; }
 
+  for (const l of lines) {
+    if (l.trackSerials) {
+      const serials = l.serialsText.split('\n').map(s => s.trim()).filter(Boolean);
+      if (serials.length !== l.quantity) {
+        errBox.textContent = `${l.name}: изисква точно ${l.quantity} серийни номера (въведени: ${serials.length}).`;
+        return;
+      }
+    }
+  }
+
   const { error } = await supabase.rpc('receive_purchase', {
     p_company_id: companyId,
     p_warehouse_id: warehouseId,
     p_supplier_id: supplierId,
     p_operator_id: operatorId,
     p_document_no: 'PO-' + Date.now(),
-    p_items: lines.map(l => ({ variant_id: l.variant_id, quantity: l.quantity, unit_cost: l.unit_cost })),
+    p_items: lines.map(l => ({
+      variant_id: l.variant_id,
+      quantity: l.quantity,
+      unit_cost: l.unit_cost,
+      ...(l.trackBatches && l.batchNo ? { batch_no: l.batchNo, manufacture_date: l.mfgDate || null, expiry_date: l.expiryDate || null } : {}),
+      ...(l.trackSerials ? { serials: l.serialsText.split('\n').map(s => s.trim()).filter(Boolean) } : {}),
+    })),
   });
 
   if (error) { errBox.textContent = 'Грешка: ' + error.message; return; }
