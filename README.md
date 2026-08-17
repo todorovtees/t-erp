@@ -97,8 +97,8 @@ policies don't assume GitHub Pages is the only possible client.
 
 ### 3.1 Run the database migrations
 
-In the Supabase dashboard → **SQL Editor**, run the seventeen files in
-`supabase/migrations/` **in numeric order** (0001 → 0017), each as its own query.
+In the Supabase dashboard → **SQL Editor**, run the twenty-three files in
+`supabase/migrations/` **in numeric order** (0001 → 0023), each as its own query.
 Migration `0011` also provisions the private `documents` Storage bucket —
 no manual dashboard step needed for that part.
 (Equivalently, with the [Supabase CLI](https://supabase.com/docs/guides/cli):
@@ -216,46 +216,64 @@ GitHub certificate issuance can take anywhere from a few minutes to a few hours.
 
 ## 6. Roadmap
 
-**Built (Phase 1 through 4):**
+**Built (Phase 1 through 5 — functional parity with the Aton feature list,
+modern responsive UI kept throughout rather than the old desktop-app style):**
 Companies · Users/Roles/Permissions · Warehouses · Products & Variants ·
-Barcodes · Inventory (multi-warehouse, 4-level stock status) · atomic stock
-movements · Dashboard · POS (customer selection, price-list-aware pricing,
-serial capture) · Sales (Преглед/Печат/Анулирай) · Purchases (batch +
-serial capture on receipt) · Customers/Suppliers · Payments · Cash
-registers · Reports · Users · Settings · Expenses · Documents (Supabase
-Storage) · shared print system · responsive redesign · **Batches +
-FEFO** (§9) · **Expiration tracking** (§11) · **Serial numbers** (§10,
-full lifecycle: received → sold → voided-back-to-stock) ·
-**Warehouse transfers** (§8, Draft→Sent→Received, atomic) ·
-**Inventory count** (§60, snapshot → count → approve → adjustment) ·
-**Price lists + per-customer pricing** (§14–15, quantity tiers, resolved
-via `resolve_price()`).
+Barcodes · Inventory (4-level stock status) · atomic stock movements ·
+Dashboard · POS (customer selection, price-list pricing, serial capture) ·
+Sales (Преглед/Печат/Анулирай) · Purchases (batch + serial capture) ·
+Customers/Suppliers (with real computed balances — see bug fix below) ·
+Payments · Cash registers · **Banks** (accounts, deposits/withdrawals,
+inter-account transfers) · Reports · Users · Settings · Expenses ·
+Documents (Supabase Storage) · print system · responsive redesign ·
+Batches + FEFO · Expiration tracking · Serial numbers · Warehouse
+transfers · Inventory count · Price lists + per-customer pricing ·
+**Write-offs/Брак** (documented stock removal with a reason) ·
+**Packaging deposits/Амбалаж** (given/returned per customer/supplier) ·
+**Customer orders** (draft → partial/full fulfillment, reuses `complete_sale()`
+internally so it gets the same atomicity + oversell protection) ·
+**Purchase requests** (auto-suggests restock quantities from live low-stock
+data) · **Unit conversions/Разфасовки** (schema + management, e.g. 1 box =
+12 pcs) · **`record_payment()`** (settle an existing sale/purchase balance
+after the fact — the "due-date account tracking" Aton describes).
 
-**On "connecting DevonThink":** not possible directly — DevonThink is a
-local macOS app with no public web API a static GitHub Pages site could call
-into. The Documents module is the practical equivalent: your own private,
-queryable, backed-up file library in the same Supabase project as
-everything else.
+**Bug fixed this round:** `customers.balance` / `suppliers.balance` were
+stored columns nothing ever wrote to — every page silently showed 0.
+Replaced with `v_customer_balances` / `v_supplier_balances`, computed live
+from actual sales/purchases/payments, always correct by construction.
+
+**On "connecting DevonThink":** still not possible directly (local macOS
+app, no public web API) — the Documents module remains the practical
+equivalent.
 
 **Not yet built:**
 
-- **Returns as a first-class flow** (§61) — voiding a sale gets you most of
-  the way there; a dedicated *partial*-return UI is still open
-- **PDF export of the print documents** — currently: formatted HTML print
-  window → browser's own "Save as PDF", not a server-generated PDF file
-- **Import/export (CSV/XLSX/JSON)** (§32)
-- **Report scheduler** (§63) — needs `pg_cron` + an email-sending Edge Function
-- **Creating new login users from the UI** — needs the `service_role` key,
-  which must never live in the frontend; done via Supabase dashboard or a
-  future Edge Function
-- **Notifications (in-app/email/SMS)** (§41–42) — needs an Edge Function
-- **PWA / offline queue** (§44–45)
-- **Fiscal device abstraction layer** (§24) — no real hardware to build
-  against; would ship as an unimplemented interface stub, low value on its own
-- **Add/Edit/Delete UI polish** for Customers/Suppliers/Warehouses/Products —
-  they currently support Add + list, not yet inline edit/delete (Sales
-  already has the full View/Print/Void treatment; Expenses has Delete)
+- Deep unit-conversion integration into the POS/Purchases cart (e.g.
+  "sell 2 boxes" auto-computing 24 pcs) — the conversions themselves are
+  stored, the cart UI doesn't use them yet
+- Distinct invoice/warranty-card/protocol document *types* with their own
+  numbering series — currently one shared print template, not per-type
+  Bulgarian legal document formats
+- Individual print template editor
+- Customer/product **groups** for group-level pricing (only per-customer
+  price lists exist, not group-level)
+- Per-customer product codes (spec §33)
+- Real multi-currency (exchange rates, conversion) — currency fields exist
+  but everything is effectively single-currency (EUR) in practice
+- Returns as a first-class flow (§61) — voiding a sale covers most of it
+- PDF export of print documents (still HTML print window → browser "Save as PDF")
+- Import/export (CSV/XLSX/JSON)
+- Report scheduler, auto-emailed reports — needs `pg_cron` + an Edge Function
+- Creating new login users from the UI — needs `service_role`, never in frontend
+- Notifications (in-app/email/SMS) — needs an Edge Function
+- PWA / offline queue
+- Peripheral hardware (fiscal devices, scales, card readers, price checkers,
+  route/delivery-trade mobile terminals) — no real hardware to build/test
+  against; would ship as unimplemented stubs, low value on their own
+- Add/Edit/Delete UI polish for Products/Warehouses (Customers/Suppliers now
+  show live balances but still lack inline edit; Sales/Write-offs/Transfers/
+  Customer Orders already have proper detail + action views)
 
-None of this is blocked architecturally — same pattern as everything above:
-a table + RLS policies + a page, or a `SECURITY DEFINER` RPC for anything
-needing atomicity. Tell me which module to build next.
+Same pattern as everywhere else for whatever comes next: a table + RLS
+policies + a page, or a `SECURITY DEFINER` RPC for anything needing
+atomicity. Tell me which module to build next.

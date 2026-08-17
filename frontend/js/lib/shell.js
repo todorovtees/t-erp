@@ -4,6 +4,14 @@ const NAV = [
   { group: 'Общ преглед', items: [
     { href: 'index.html', label: 'Dashboard', key: 'dashboard' },
   ]},
+  { group: 'Търговия', items: [
+    { href: 'sales.html', label: 'Продажби', key: 'sales' },
+    { href: 'pos.html', label: 'POS', key: 'pos', tag: 'F10' },
+    { href: 'purchases.html', label: 'Покупки', key: 'purchases' },
+    { href: 'price-lists.html', label: 'Ценови листи', key: 'price-lists' },
+    { href: 'customer-orders.html', label: 'Поръчки от клиенти', key: 'customer-orders' },
+    { href: 'purchase-requests.html', label: 'Заявки за доставка', key: 'purchase-requests' },
+  ]},
   { group: 'Склад', items: [
     { href: 'products.html', label: 'Продукти', key: 'products' },
     { href: 'inventory.html', label: 'Наличности', key: 'inventory' },
@@ -12,12 +20,8 @@ const NAV = [
     { href: 'counts.html', label: 'Инвентаризация', key: 'counts' },
     { href: 'batches.html', label: 'Партиди / Годност', key: 'batches' },
     { href: 'serials.html', label: 'Серийни номера', key: 'serials' },
-  ]},
-  { group: 'Търговия', items: [
-    { href: 'sales.html', label: 'Продажби', key: 'sales' },
-    { href: 'pos.html', label: 'POS', key: 'pos', tag: 'F10' },
-    { href: 'purchases.html', label: 'Покупки', key: 'purchases' },
-    { href: 'price-lists.html', label: 'Ценови листи', key: 'price-lists' },
+    { href: 'write-offs.html', label: 'Брак / Изписване', key: 'write-offs' },
+    { href: 'packaging.html', label: 'Амбалаж', key: 'packaging' },
   ]},
   { group: 'Контакти', items: [
     { href: 'customers.html', label: 'Клиенти', key: 'customers' },
@@ -26,6 +30,7 @@ const NAV = [
   { group: 'Финанси', items: [
     { href: 'payments.html', label: 'Плащания', key: 'payments' },
     { href: 'cash.html', label: 'Каси', key: 'cash' },
+    { href: 'banks.html', label: 'Банки', key: 'banks' },
     { href: 'expenses.html', label: 'Разходи', key: 'expenses' },
   ]},
   { group: 'Документация', items: [

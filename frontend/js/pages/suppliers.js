@@ -79,7 +79,7 @@ async function load(search) {
   const mount = document.getElementById('table-mount');
   let query = supabase
     .from('suppliers')
-    .select('name, eik, phone, email, balance')
+    .select('id, name, eik, phone, email')
     .eq('company_id', companyId)
     .order('name');
 
@@ -89,9 +89,15 @@ async function load(search) {
   if (error) { mount.innerHTML = `<div style="padding:20px;">Грешка: ${error.message}</div>`; return; }
   if (!data.length) { mount.innerHTML = `<div style="padding:20px; color:var(--gray-700); font-size:13px;">Няма доставчици.</div>`; return; }
 
+  const { data: balances } = await supabase
+    .from('v_supplier_balances')
+    .select('supplier_id, balance')
+    .eq('company_id', companyId);
+  const balanceMap = Object.fromEntries((balances || []).map(b => [b.supplier_id, b.balance]));
+
   mount.innerHTML = `
     <table class="data">
-      <thead><tr><th>Име</th><th>ЕИК</th><th>Телефон</th><th>Имейл</th><th>Баланс</th></tr></thead>
+      <thead><tr><th>Име</th><th>ЕИК</th><th>Телефон</th><th>Имейл</th><th>Дължим баланс</th></tr></thead>
       <tbody>
         ${data.map(s => `
           <tr>
@@ -99,7 +105,7 @@ async function load(search) {
             <td class="mono">${s.eik || '—'}</td>
             <td class="mono">${s.phone || '—'}</td>
             <td>${s.email || '—'}</td>
-            <td class="mono">${eur.format(s.balance)}</td>
+            <td class="mono" style="color:${(balanceMap[s.id] || 0) > 0 ? 'var(--accent-ink)' : 'inherit'};">${eur.format(balanceMap[s.id] || 0)}</td>
           </tr>
         `).join('')}
       </tbody>
