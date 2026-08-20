@@ -73,6 +73,8 @@ async function main() {
       </div>
       <div id="products-table-mount"></div>
     </div>
+
+    <div id="modal-mount"></div>
   `;
 
   document.getElementById('new-product-btn').addEventListener('click', () => {
@@ -159,7 +161,7 @@ async function loadProducts(search) {
     <table class="data">
       <thead><tr>
         <th>SKU</th><th>Продукт</th><th>Категория</th><th>Варианти</th>
-        <th>Наличност (общо)</th><th>Продажна цена</th><th>Статус</th>
+        <th>Наличност (общо)</th><th>Продажна цена</th><th>Статус</th><th>Действия</th>
       </tr></thead>
       <tbody>
         ${data.map(p => `
@@ -174,10 +176,83 @@ async function loadProducts(search) {
             </td>
             <td class="mono">${eur.format(p.sale_price)}</td>
             <td>${p.is_active ? 'Активен' : 'Неактивен'}</td>
+            <td>
+              <div class="action-row">
+                <button class="btn sm" data-edit="${p.id}">Редактирай</button>
+                <button class="btn sm danger" data-delete="${p.id}">Изтрий</button>
+              </div>
+            </td>
           </tr>
         `).join('')}
       </tbody>
     </table>`;
+
+  mount.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditModal(b.dataset.edit)));
+  mount.querySelectorAll('[data-delete]').forEach(b => b.addEventListener('click', () => deleteProduct(b.dataset.delete)));
+}
+
+async function openEditModal(productId) {
+  const { data: p, error } = await supabase
+    .from('products')
+    .select('id, sku, name, category_id, unit, vat_rate, purchase_price, sale_price, min_stock, is_active, track_batches, track_serials')
+    .eq('id', productId).single();
+  if (error) { alert('Грешка: ' + error.message); return; }
+
+  const mount = document.getElementById('modal-mount');
+  mount.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal-card">
+        <div class="panel__header"><span>Редактирай продукт</span><button class="modal-close" id="modal-close">✕</button></div>
+        <form id="edit-form" class="form-grid-3">
+          <div class="field"><label>SKU *</label><input name="sku" value="${p.sku}" required /></div>
+          <div class="field" style="grid-column:span 2;"><label>Име *</label><input name="name" value="${p.name}" required /></div>
+          <div class="field"><label>Категория</label>
+            <select name="category_id"><option value="">—</option>${categories.map(c => `<option value="${c.id}" ${c.id === p.category_id ? 'selected' : ''}>${c.name}</option>`).join('')}</select>
+          </div>
+          <div class="field"><label>Мерна единица</label>
+            <select name="unit">
+              ${['pcs', 'kg', 'l', 'box'].map(u => `<option value="${u}" ${u === p.unit ? 'selected' : ''}>${u}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field"><label>ДДС %</label><input name="vat_rate" type="number" step="0.01" value="${p.vat_rate}" /></div>
+          <div class="field"><label>Покупна цена</label><input name="purchase_price" type="number" step="0.01" value="${p.purchase_price}" /></div>
+          <div class="field"><label>Продажна цена *</label><input name="sale_price" type="number" step="0.01" value="${p.sale_price}" required /></div>
+          <div class="field"><label>Мин. наличност</label><input name="min_stock" type="number" step="1" value="${p.min_stock}" /></div>
+          <div class="field"><label>Статус</label>
+            <select name="is_active"><option value="true" ${p.is_active ? 'selected' : ''}>Активен</option><option value="false" ${!p.is_active ? 'selected' : ''}>Неактивен</option></select>
+          </div>
+          <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center;">
+            <button class="btn primary" type="submit">Запази промените</button>
+            <span id="edit-error" style="color:var(--bad); font-size:12.5px;"></span>
+          </div>
+        </form>
+      </div>
+    </div>`;
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop') closeModal(); });
+  document.getElementById('edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('edit-error');
+    const fd = new FormData(e.target);
+    const { error: updErr } = await supabase.from('products').update({
+      sku: fd.get('sku').trim(), name: fd.get('name').trim(), category_id: fd.get('category_id') || null,
+      unit: fd.get('unit'), vat_rate: Number(fd.get('vat_rate')), purchase_price: Number(fd.get('purchase_price')),
+      sale_price: Number(fd.get('sale_price')), min_stock: Number(fd.get('min_stock')), is_active: fd.get('is_active') === 'true',
+    }).eq('id', productId);
+    if (updErr) { errBox.textContent = 'Грешка: ' + updErr.message; return; }
+    closeModal();
+    await loadProducts(document.getElementById('search-box').value);
+  });
+}
+
+function closeModal() { document.getElementById('modal-mount').innerHTML = ''; }
+
+async function deleteProduct(productId) {
+  if (!confirm('Да изтрия ли този продукт? (изисква пълни права)')) return;
+  const { error } = await supabase.from('products').delete().eq('id', productId);
+  if (error) { alert('Грешка: ' + error.message); return; }
+  await loadProducts(document.getElementById('search-box').value);
 }
 
 main();

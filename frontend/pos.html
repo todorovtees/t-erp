@@ -24,6 +24,9 @@
   .cart-footer { border-top: 1px solid var(--gray-100); padding: 14px; }
   .cart-total { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 20px; font-weight: 600; margin-bottom: 12px; }
 </style>
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#14151A" />
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script>
 </head>
 <body>
 <div class="app-shell" id="app-shell"></div>

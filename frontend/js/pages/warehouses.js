@@ -39,6 +39,8 @@ async function main() {
       <div class="panel__header">Списък складове</div>
       <div id="wh-table-mount"></div>
     </div>
+
+    <div id="modal-mount"></div>
   `;
 
   document.getElementById('new-wh-btn').addEventListener('click', () => {
@@ -78,7 +80,7 @@ async function loadWarehouses() {
   const mount = document.getElementById('wh-table-mount');
   const { data, error } = await supabase
     .from('warehouses')
-    .select('code, name, address, phone, status')
+    .select('id, code, name, address, phone, status')
     .eq('company_id', companyId)
     .order('code');
 
@@ -87,7 +89,7 @@ async function loadWarehouses() {
 
   mount.innerHTML = `
     <table class="data">
-      <thead><tr><th>Код</th><th>Име</th><th>Адрес</th><th>Телефон</th><th>Статус</th></tr></thead>
+      <thead><tr><th>Код</th><th>Име</th><th>Адрес</th><th>Телефон</th><th>Статус</th><th></th></tr></thead>
       <tbody>
         ${data.map(w => `
           <tr>
@@ -96,10 +98,55 @@ async function loadWarehouses() {
             <td>${w.address || '—'}</td>
             <td class="mono">${w.phone || '—'}</td>
             <td>${w.status === 'active' ? 'Активен' : 'Неактивен'}</td>
+            <td><button class="btn sm" data-edit="${w.id}">Редактирай</button></td>
           </tr>
         `).join('')}
       </tbody>
     </table>`;
+
+  mount.querySelectorAll('[data-edit]').forEach(b => b.addEventListener('click', () => openEditModal(b.dataset.edit, data)));
+}
+
+function openEditModal(id, rows) {
+  const w = rows.find(r => r.id === id);
+  const mount = document.getElementById('modal-mount');
+  mount.innerHTML = `
+    <div class="modal-backdrop" id="modal-backdrop">
+      <div class="modal-card">
+        <div class="panel__header"><span>Редактирай склад</span><button class="modal-close" id="modal-close">✕</button></div>
+        <form id="edit-form" class="form-grid-2">
+          <div class="field"><label>Код *</label><input name="code" value="${w.code}" required /></div>
+          <div class="field"><label>Име *</label><input name="name" value="${w.name}" required /></div>
+          <div class="field" style="grid-column:span 2;"><label>Адрес</label><input name="address" value="${w.address || ''}" /></div>
+          <div class="field"><label>Телефон</label><input name="phone" value="${w.phone || ''}" /></div>
+          <div class="field"><label>Статус</label>
+            <select name="status"><option value="active" ${w.status === 'active' ? 'selected' : ''}>Активен</option><option value="inactive" ${w.status === 'inactive' ? 'selected' : ''}>Неактивен</option></select>
+          </div>
+          <div style="grid-column:1/-1; display:flex; gap:10px; align-items:center;">
+            <button class="btn primary" type="submit">Запази промените</button>
+            <span id="edit-error" style="color:var(--bad); font-size:12.5px;"></span>
+          </div>
+        </form>
+        <div style="padding:0 16px 16px; font-size:11.5px; color:var(--gray-700);">
+          Складове с история (наличности, движения) не могат да се изтриват — деактивирай ги вместо това.
+        </div>
+      </div>
+    </div>`;
+
+  document.getElementById('modal-close').addEventListener('click', () => mount.innerHTML = '');
+  document.getElementById('modal-backdrop').addEventListener('click', (e) => { if (e.target.id === 'modal-backdrop') mount.innerHTML = ''; });
+  document.getElementById('edit-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errBox = document.getElementById('edit-error');
+    const fd = new FormData(e.target);
+    const { error } = await supabase.from('warehouses').update({
+      code: fd.get('code').trim(), name: fd.get('name').trim(),
+      address: fd.get('address') || null, phone: fd.get('phone') || null, status: fd.get('status'),
+    }).eq('id', id);
+    if (error) { errBox.textContent = 'Грешка: ' + error.message; return; }
+    mount.innerHTML = '';
+    await loadWarehouses();
+  });
 }
 
 main();

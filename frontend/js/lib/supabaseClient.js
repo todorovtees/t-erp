@@ -12,7 +12,7 @@ export const SUPABASE_URL = 'https://nkbpbbumyriecvhjykho.supabase.co';
 // TODO: paste your project's anon/public key (Supabase dashboard →
 // Project Settings → API → "anon public"). It's safe to commit — it is
 // not a secret, RLS is what actually protects the data.
-export const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5rYnBiYnVteXJpZWN2aGp5a2hvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODY3MTIyNjQsImV4cCI6MjEwMjI4ODI2NH0.MOi1qhrD1UzDg6hJDw0yMKc3RK3JLmxY41gMN_T8v5A';
+export const SUPABASE_ANON_KEY = 'REPLACE_WITH_SUPABASE_ANON_KEY';
 
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: { persistSession: true, autoRefreshToken: true },

@@ -16,6 +16,9 @@
   }
   .dropzone.drag { border-color: var(--accent); background: var(--gray-50); }
 </style>
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#14151A" />
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script>
 </head>
 <body>
 <div class="app-shell" id="app-shell"></div>

@@ -86,7 +86,7 @@ async function searchProducts(term) {
 
   const { data, error } = await supabase
     .from('product_variants')
-    .select('id, sku, color, size, sale_price, products!inner(id, name, company_id, purchase_price, track_batches, track_serials)')
+    .select('id, sku, color, size, sale_price, products!inner(id, name, company_id, purchase_price, unit, track_batches, track_serials)')
     .eq('products.company_id', companyId)
     .or(`sku.ilike.%${term}%`)
     .limit(15);
@@ -101,32 +101,55 @@ async function searchProducts(term) {
   `).join('');
 
   mount.querySelectorAll('[data-id]').forEach(row => {
-    row.addEventListener('click', () => {
+    row.addEventListener('click', async () => {
       const v = data.find(x => x.id === row.dataset.id);
-      addLine(v);
+      await addLine(v);
       document.getElementById('product-search').value = '';
       mount.innerHTML = '';
     });
   });
 }
 
-function addLine(v) {
+async function addLine(v) {
   const existing = lines.find(l => l.variant_id === v.id);
-  if (existing) { existing.quantity += 1; }
+  if (existing) { existing.receivingQty += 1; recomputeLineQuantity(existing); }
   else {
-    lines.push({
+    const { data: conversions } = await supabase
+      .from('unit_conversions')
+      .select('from_unit, to_unit, factor')
+      .eq('product_id', v.products.id);
+
+    const line = {
       variant_id: v.id,
       name: v.products.name,
       meta: [v.color, v.size].filter(Boolean).join('/') || v.sku,
-      quantity: 1,
+      baseUnit: v.products.unit || 'pcs',
+      conversions: conversions || [],
+      receivingUnit: v.products.unit || 'pcs',
+      receivingQty: 1,
+      quantity: 1, // always the real base-unit quantity sent to receive_purchase
       unit_cost: Number(v.products.purchase_price || 0),
       trackBatches: v.products.track_batches,
       trackSerials: v.products.track_serials,
       batchNo: '', mfgDate: '', expiryDate: '',
       serialsText: '',
-    });
+    };
+    lines.push(line);
   }
   renderLines();
+}
+
+// Recomputes the real base-unit quantity from receivingQty + the chosen
+// receivingUnit (spec §12 "разфасовки": e.g. 1 box = 12 pcs). If the
+// product has no conversions defined, receivingUnit stays the base unit and
+// this is a no-op multiply-by-1.
+function recomputeLineQuantity(line) {
+  if (line.receivingUnit === line.baseUnit) {
+    line.quantity = line.receivingQty;
+  } else {
+    const conv = line.conversions.find(c => c.from_unit === line.receivingUnit);
+    line.quantity = conv ? line.receivingQty * Number(conv.factor) : line.receivingQty;
+  }
 }
 
 function renderLines() {
@@ -138,7 +161,17 @@ function renderLines() {
         ${l.trackBatches ? '<br><span class="mono" style="font-size:10px; color:var(--accent-ink);">изисква партида</span>' : ''}
         ${l.trackSerials ? '<br><span class="mono" style="font-size:10px; color:var(--accent-ink);">изисква сериен №</span>' : ''}
       </td>
-      <td><input type="number" min="1" step="1" value="${l.quantity}" data-i="${i}" data-f="quantity" style="width:70px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" /></td>
+      <td>
+        <div style="display:flex; gap:4px; align-items:center;">
+          <input type="number" min="1" step="1" value="${l.receivingQty}" data-i="${i}" data-f="receivingQty" style="width:60px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" />
+          ${l.conversions.length ? `
+            <select data-i="${i}" data-f="receivingUnit" style="font-size:11px;">
+              <option value="${l.baseUnit}" ${l.receivingUnit === l.baseUnit ? 'selected' : ''}>${l.baseUnit}</option>
+              ${l.conversions.map(c => `<option value="${c.from_unit}" ${l.receivingUnit === c.from_unit ? 'selected' : ''}>${c.from_unit} (=${c.factor} ${l.baseUnit})</option>`).join('')}
+            </select>` : `<span class="mono" style="font-size:11px; color:var(--gray-700);">${l.baseUnit}</span>`}
+        </div>
+        ${l.receivingUnit !== l.baseUnit ? `<div class="mono" style="font-size:10px; color:var(--gray-700); margin-top:2px;">= ${l.quantity} ${l.baseUnit}</div>` : ''}
+      </td>
       <td><input type="number" min="0" step="0.01" value="${l.unit_cost}" data-i="${i}" data-f="unit_cost" style="width:90px; border:1px solid var(--gray-300); border-radius:3px; padding:4px;" /></td>
       <td class="mono">${eur.format(l.quantity * l.unit_cost)}</td>
       <td><button class="btn" data-remove="${i}" style="padding:4px 8px;">✕</button></td>
@@ -159,19 +192,22 @@ function renderLines() {
     <tr>
       <td colspan="5" style="background:var(--gray-50); padding:8px;">
         <div style="font-size:12px; color:var(--gray-700); margin-bottom:4px;">
-          Серийни номера (по един на ред, трябва да съвпада с количеството — ${l.quantity} бр.):
+          Серийни номера (по един на ред, трябва да съвпада с количеството в ${l.baseUnit} — ${l.quantity} бр.):
         </div>
         <textarea data-i="${i}" data-f="serialsText" rows="2" style="width:100%; border:1px solid var(--gray-300); border-radius:3px; padding:6px; font-family:var(--font-mono); font-size:12px;">${l.serialsText}</textarea>
       </td>
     </tr>` : ''}
   `).join('');
 
-  mount.querySelectorAll('input, textarea').forEach(inp => {
+  mount.querySelectorAll('input, select, textarea').forEach(inp => {
     inp.addEventListener('input', () => {
       const field = inp.dataset.f;
       const i = Number(inp.dataset.i);
-      lines[i][field] = (field === 'quantity' || field === 'unit_cost') ? Number(inp.value) : inp.value;
-      if (field === 'quantity' || field === 'unit_cost') renderLines();
+      const line = lines[i];
+      if (field === 'receivingQty') { line.receivingQty = Number(inp.value); recomputeLineQuantity(line); renderLines(); }
+      else if (field === 'receivingUnit') { line.receivingUnit = inp.value; recomputeLineQuantity(line); renderLines(); }
+      else if (field === 'unit_cost') { line.unit_cost = Number(inp.value); renderLines(); }
+      else { line[field] = inp.value; }
     });
   });
   mount.querySelectorAll('[data-remove]').forEach(btn => {

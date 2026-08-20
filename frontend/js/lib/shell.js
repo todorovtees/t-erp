@@ -11,6 +11,7 @@ const NAV = [
     { href: 'price-lists.html', label: 'Ценови листи', key: 'price-lists' },
     { href: 'customer-orders.html', label: 'Поръчки от клиенти', key: 'customer-orders' },
     { href: 'purchase-requests.html', label: 'Заявки за доставка', key: 'purchase-requests' },
+    { href: 'returns.html', label: 'Връщания', key: 'returns' },
   ]},
   { group: 'Склад', items: [
     { href: 'products.html', label: 'Продукти', key: 'products' },
@@ -32,14 +33,19 @@ const NAV = [
     { href: 'cash.html', label: 'Каси', key: 'cash' },
     { href: 'banks.html', label: 'Банки', key: 'banks' },
     { href: 'expenses.html', label: 'Разходи', key: 'expenses' },
+    { href: 'currencies.html', label: 'Валути', key: 'currencies' },
   ]},
   { group: 'Документация', items: [
     { href: 'documents.html', label: 'Документи', key: 'documents' },
+    { href: 'templates.html', label: 'Шаблони за печат', key: 'templates' },
   ]},
   { group: 'Система', items: [
     { href: 'reports.html', label: 'Отчети', key: 'reports' },
     { href: 'users.html', label: 'Потребители', key: 'users' },
     { href: 'settings.html', label: 'Настройки', key: 'settings' },
+    { href: 'import-export.html', label: 'Импорт / Експорт', key: 'import-export' },
+    { href: 'notifications.html', label: 'Известия', key: 'notifications' },
+    { href: 'admin-queue.html', label: 'Автоматизация', key: 'admin-queue' },
   ]},
 ];
 
@@ -90,6 +96,9 @@ export async function renderShell(activeKey) {
           <kbd>F2</kbd>
         </div>
         <div class="topbar__spacer"></div>
+        <a href="./notifications.html" id="notif-bell" style="position:relative; text-decoration:none; color:var(--ink); display:flex; align-items:center; padding:6px;">
+          🔔<span id="notif-badge" style="display:none; position:absolute; top:0; right:0; background:var(--bad); color:#fff; font-size:9px; font-family:var(--font-mono); border-radius:8px; padding:1px 4px; min-width:14px; text-align:center;"></span>
+        </a>
         <div class="topbar__user">
           <span>${profile?.full_name || session.user.email}</span>
           <span class="avatar">${initials}</span>
@@ -112,6 +121,21 @@ export async function renderShell(activeKey) {
     await supabase.auth.signOut();
     window.location.href = './login.html';
   });
+
+  if (profile) {
+    supabase
+      .from('notifications')
+      .select('id', { count: 'exact', head: true })
+      .eq('company_id', profile.company_id)
+      .eq('is_read', false)
+      .then(({ count }) => {
+        if (count) {
+          const badge = document.getElementById('notif-badge');
+          badge.textContent = count > 99 ? '99+' : String(count);
+          badge.style.display = 'block';
+        }
+      });
+  }
 
   return {
     content: document.getElementById('app-content'),

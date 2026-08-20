@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { renderShell } from '../lib/shell.js';
+import { getFiscalAdapter } from '../lib/fiscal-adapter.js';
 
 const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' });
 
@@ -37,6 +38,7 @@ async function main() {
     <div class="page-header">
       <div><h1>POS</h1><div class="sub">Продажба на място</div></div>
       <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <span id="offline-badge" style="display:none; background:var(--accent); color:var(--ink); font-size:11px; padding:4px 8px; border-radius:4px; align-self:center;"></span>
         <select id="customer-select" style="border:1px solid var(--gray-300); border-radius:4px; padding:8px 10px; font-size:13px;">
           <option value="">Без клиент (стандартни цени)</option>
           ${(customers || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
@@ -86,6 +88,9 @@ async function main() {
     if (e.key === 'F2') { e.preventDefault(); document.getElementById('pos-search').focus(); }
     if (e.key === 'F10') { e.preventDefault(); if (cart.length) checkout(); }
   });
+
+  updateOfflineBadge();
+  if (navigator.onLine) syncOfflineQueue();
 
   await runSearch('');
 }
@@ -233,6 +238,56 @@ function renderCart() {
   checkoutBtn.disabled = false;
 }
 
+// ---- Offline queue (spec §44-45) --------------------------------------
+// A queued sale is retried with the SAME document_no every attempt. Since
+// complete_sale() enforces a unique (company_id, document_no) constraint
+// and is fully atomic, a retry after a partial network failure can never
+// create a duplicate sale — it either hasn't landed yet (retry proceeds) or
+// it already fully landed (retry gets a harmless unique-constraint error,
+// treated as success and removed from the queue).
+
+const QUEUE_KEY = 'terp_offline_sales_queue';
+
+function getOfflineQueue() {
+  try { return JSON.parse(localStorage.getItem(QUEUE_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function queueOfflineSale(saleParams) {
+  const queue = getOfflineQueue();
+  queue.push({ id: crypto.randomUUID(), queuedAt: new Date().toISOString(), saleParams });
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+}
+
+function updateOfflineBadge() {
+  const badge = document.getElementById('offline-badge');
+  if (!badge) return;
+  const count = getOfflineQueue().length;
+  badge.style.display = count ? 'inline-block' : 'none';
+  badge.textContent = `${count} чакаща продажба извън мрежата`;
+}
+
+async function syncOfflineQueue() {
+  const queue = getOfflineQueue();
+  if (!queue.length) return;
+
+  const remaining = [];
+  for (const entry of queue) {
+    try {
+      const { error } = await supabase.rpc('complete_sale', entry.saleParams);
+      if (error && !/duplicate key|unique constraint/i.test(error.message)) {
+        remaining.push(entry); // real business error (e.g. now out of stock) - keep for manual review
+      }
+    } catch {
+      remaining.push(entry); // still offline, try again next time
+    }
+  }
+  localStorage.setItem(QUEUE_KEY, JSON.stringify(remaining));
+  updateOfflineBadge();
+}
+
+window.addEventListener('online', syncOfflineQueue);
+
 async function checkout() {
   const errBox = document.getElementById('checkout-error');
   const btn = document.getElementById('checkout-btn');
@@ -252,16 +307,28 @@ async function checkout() {
   const payments = [{ method: document.getElementById('pay-method').value, amount: Math.round(total * 100) / 100 }];
   const documentNo = 'POS-' + Date.now();
 
-  const { error } = await supabase.rpc('complete_sale', {
-    p_company_id: companyId,
-    p_warehouse_id: warehouseId,
-    p_customer_id: customerId,
-    p_operator_id: operatorId,
-    p_channel: 'pos',
-    p_document_no: documentNo,
-    p_items: items,
-    p_payments: payments,
-  });
+  const saleParams = {
+    p_company_id: companyId, p_warehouse_id: warehouseId, p_customer_id: customerId,
+    p_operator_id: operatorId, p_channel: 'pos', p_document_no: documentNo, p_items: items, p_payments: payments,
+  };
+
+  let error;
+  try {
+    ({ error } = await supabase.rpc('complete_sale', saleParams));
+  } catch (networkErr) {
+    // A thrown exception (not a returned {error}) means the request never
+    // reached the server at all — genuine offline, not a business-logic
+    // rejection. Queue it instead of losing the sale (spec §44-45).
+    queueOfflineSale(saleParams);
+    cart = [];
+    renderCart();
+    btn.disabled = false;
+    btn.textContent = 'Завърши продажба (F10)';
+    errBox.style.color = 'var(--accent-ink)';
+    errBox.textContent = `Няма връзка — продажба ${documentNo} е запазена локално и ще се синхронизира автоматично.`;
+    updateOfflineBadge();
+    return;
+  }
 
   if (error) {
     errBox.textContent = 'Грешка: ' + error.message;
@@ -269,6 +336,16 @@ async function checkout() {
     btn.textContent = 'Завърши продажба (F10)';
     return;
   }
+
+  // Fiscal receipt — see js/lib/fiscal-adapter.js for why this is a mock
+  // driver (no real device to test against) rather than a live integration.
+  const fiscal = getFiscalAdapter();
+  const receipt = await fiscal.issueReceipt({ documentNo, items, total, paymentMethod: payments[0].method });
+  await supabase.rpc('record_fiscal_receipt', {
+    p_company_id: companyId, p_sale_id: null, p_device_serial: 'MOCK-DEV-001',
+    p_fiscal_number: receipt.fiscalNumber || null, p_status: receipt.status,
+    p_raw_response: receipt.raw || { error: receipt.error }, p_operator_id: operatorId,
+  });
 
   cart = [];
   renderCart();

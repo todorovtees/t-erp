@@ -6,6 +6,62 @@
 // "Печат" button across the app — sale receipts, inventory lists, and any
 // future document type — so they all share one consistent, professional
 // layout instead of each page reinventing it.
+//
+// Two ways to print:
+//  - printDocument(doc) — the built-in structured layout (title/meta/table/
+//    totals), used by most pages.
+//  - printCustomTemplate(templateBody, data) — interpolates a user-authored
+//    template (from the print_templates table, managed on the Templates
+//    page) with {{placeholder}} tokens like {{customer.name}} or
+//    {{document.total}} (spec §31), for fully custom document layouts.
+
+/** Reads a dotted path like "customer.name" out of a nested data object. */
+function getPath(obj, path) {
+  return path.split('.').reduce((v, k) => (v == null ? v : v[k]), obj);
+}
+
+/** Replaces every {{a.b.c}} token in a template string with the matching
+ *  value from `data`, HTML-escaped. Unknown paths render as empty string
+ *  rather than leaving the raw token visible. */
+export function interpolateTemplate(templateBody, data) {
+  const esc = (v) => String(v ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  return templateBody.replace(/\{\{\s*([\w.]+)\s*\}\}/g, (_, path) => esc(getPath(data, path)));
+}
+
+export function printCustomTemplate(documentTitle, templateBody, data) {
+  const win = window.open('', '_blank', 'width=850,height=1100');
+  if (!win) {
+    alert('Браузърът блокира отварянето на прозорец за печат. Разреши popup прозорци за този сайт.');
+    return;
+  }
+
+  const body = interpolateTemplate(templateBody, data);
+  const html = `<!doctype html>
+<html lang="bg">
+<head>
+<meta charset="utf-8" />
+<title>${documentTitle}</title>
+<style>
+  @page { margin: 18mm 16mm; }
+  body { font-family: 'IBM Plex Sans', -apple-system, sans-serif; color: #14151A; font-size: 13px; margin: 0; padding: 28px; }
+  @media print { body { padding: 0; } .print-btn { display: none; } }
+  .print-btn { position: fixed; top: 16px; right: 16px; font-family: 'IBM Plex Sans', sans-serif; font-size: 13px; font-weight: 500;
+    padding: 8px 16px; border-radius: 4px; border: 1px solid #14151A; background: #14151A; color: #fff; cursor: pointer; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { padding: 6px 8px; border-bottom: 1px solid #EDEDEF; }
+</style>
+</head>
+<body>
+  <button class="print-btn" onclick="window.print()">Отпечатай</button>
+  ${body}
+</body>
+</html>`;
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.focus();
+}
 
 /**
  * @param {Object} doc

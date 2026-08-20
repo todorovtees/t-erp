@@ -284,8 +284,13 @@ table.data tr:hover td { background: var(--gray-50); }
 .btn.danger { color: var(--bad); border-color: var(--bad); background: var(--paper); }
 .btn.danger:hover { background: var(--bad); color: var(--paper); }
 .btn.sm { padding: 5px 9px; font-size: 12px; }
+.btn[data-active="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
 
 .action-row { display: flex; gap: 6px; flex-wrap: wrap; }
+.action-row .btn[data-active="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+
+
 
 /* ---- Auth screen --------------------------------------------------------------- */
 

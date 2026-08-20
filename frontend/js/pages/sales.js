@@ -1,6 +1,6 @@
 import { supabase } from '../lib/supabaseClient.js';
 import { renderShell } from '../lib/shell.js';
-import { printDocument } from '../lib/print.js';
+import { printDocument, printCustomTemplate } from '../lib/print.js';
 
 const eur = new Intl.NumberFormat('bg-BG', { style: 'currency', currency: 'EUR' });
 const STATUS_LABEL = {
@@ -97,7 +97,15 @@ async function load() {
             <td>
               <div class="action-row">
                 <button class="btn sm" data-view="${s.id}">Преглед</button>
-                <button class="btn sm" data-print="${s.id}">Печат</button>
+                <select data-printtype="${s.id}" style="font-size:11px; padding:4px 6px;">
+                  <option value="">Печат…</option>
+                  <option value="_plain">Обикновен</option>
+                  <option value="invoice">Фактура</option>
+                  <option value="proforma">Проформа</option>
+                  <option value="warranty">Гаранционна карта</option>
+                  <option value="protocol">Протокол</option>
+                  <option value="delivery_note">Стокова разписка</option>
+                </select>
                 ${s.status !== 'cancelled' ? `<button class="btn sm danger" data-void="${s.id}">Анулирай</button>` : ''}
               </div>
             </td>
@@ -107,7 +115,11 @@ async function load() {
     </table>`;
 
   mount.querySelectorAll('[data-view]').forEach(b => b.addEventListener('click', () => viewSale(b.dataset.view)));
-  mount.querySelectorAll('[data-print]').forEach(b => b.addEventListener('click', () => printSale(b.dataset.print)));
+  mount.querySelectorAll('[data-printtype]').forEach(sel => sel.addEventListener('change', () => {
+    if (!sel.value) return;
+    printSale(sel.dataset.printtype, sel.value);
+    sel.value = '';
+  }));
   mount.querySelectorAll('[data-void]').forEach(b => b.addEventListener('click', () => voidSale(b.dataset.void)));
 }
 
@@ -167,12 +179,48 @@ async function viewSale(saleId) {
 
 function closeModal() { document.getElementById('modal-mount').innerHTML = ''; }
 
-async function printSale(saleId) {
+const DOC_TYPE_LABEL = {
+  invoice: 'Фактура', proforma: 'Проформа фактура', warranty: 'Гаранционна карта',
+  protocol: 'Протокол', delivery_note: 'Стокова разписка',
+};
+
+async function printSale(saleId, docType) {
   const { header, items } = await fetchSaleDetail(saleId);
 
+  // Plain print: no official numbering, just the internal document_no.
+  if (docType === '_plain') {
+    return printStructured(header, items, `Продажба ${header.document_no}`, `Канал: ${CHANNEL_LABEL[header.channel] || header.channel}`);
+  }
+
+  // Official document: pull a real sequential number from its own series
+  // (0024), so invoices/warranties/protocols each number independently.
+  const { data: docNumber, error: numErr } = await supabase.rpc('issue_document_number', {
+    p_company_id: companyId, p_doc_type: docType, p_ref_table: 'sales', p_ref_id: saleId, p_operator_id: operatorId,
+  });
+  if (numErr) { alert('Грешка при издаване на номер: ' + numErr.message); return; }
+
+  // If the company authored a custom template for this document type
+  // (Templates page), use it; otherwise fall back to the built-in layout.
+  const { data: templates } = await supabase
+    .from('print_templates').select('body').eq('company_id', companyId).eq('doc_type', docType).limit(1);
+
+  if (templates && templates.length) {
+    const { data: company } = await supabase.from('companies').select('name, address, eik').eq('id', companyId).single();
+    printCustomTemplate(`${DOC_TYPE_LABEL[docType]} ${docNumber}`, templates[0].body, {
+      document: { number: docNumber, date: new Date(header.created_at).toLocaleDateString('bg-BG'), total: eur.format(header.total) },
+      customer: { name: header.customer_name || '—', address: '', eik: '' },
+      company: { name: company?.name || '', address: company?.address || '', eik: company?.eik || '' },
+    });
+    return;
+  }
+
+  printStructured(header, items, `${DOC_TYPE_LABEL[docType]} ${docNumber}`, `Документ №${docNumber} · вътр. ${header.document_no}`);
+}
+
+function printStructured(header, items, title, subtitle) {
   printDocument({
-    documentTitle: `Продажба ${header.document_no}`,
-    subtitle: `Канал: ${CHANNEL_LABEL[header.channel] || header.channel}`,
+    documentTitle: title,
+    subtitle,
     meta: [
       { label: 'Дата', value: new Date(header.created_at).toLocaleString('bg-BG') },
       { label: 'Склад', value: header.warehouse_name },

@@ -8,6 +8,9 @@
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="./css/tokens.css" />
 <link rel="stylesheet" href="./css/app.css" />
+<link rel="manifest" href="./manifest.json" />
+<meta name="theme-color" content="#14151A" />
+<script>if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));}</script>
 </head>
 <body>
 <div class="app-shell" id="app-shell"></div>
