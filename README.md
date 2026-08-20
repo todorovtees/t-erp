@@ -97,8 +97,8 @@ policies don't assume GitHub Pages is the only possible client.
 
 ### 3.1 Run the database migrations
 
-In the Supabase dashboard → **SQL Editor**, run the twenty-three files in
-`supabase/migrations/` **in numeric order** (0001 → 0023), each as its own query.
+In the Supabase dashboard → **SQL Editor**, run the thirty-one files in
+`supabase/migrations/` **in numeric order** (0001 → 0031), each as its own query.
 Migration `0011` also provisions the private `documents` Storage bucket —
 no manual dashboard step needed for that part.
 (Equivalently, with the [Supabase CLI](https://supabase.com/docs/guides/cli):
@@ -214,66 +214,66 @@ GitHub certificate issuance can take anywhere from a few minutes to a few hours.
 
 ---
 
-## 6. Roadmap
+## 6. What's built, and what still needs you
 
-**Built (Phase 1 through 5 — functional parity with the Aton feature list,
-modern responsive UI kept throughout rather than the old desktop-app style):**
-Companies · Users/Roles/Permissions · Warehouses · Products & Variants ·
-Barcodes · Inventory (4-level stock status) · atomic stock movements ·
-Dashboard · POS (customer selection, price-list pricing, serial capture) ·
-Sales (Преглед/Печат/Анулирай) · Purchases (batch + serial capture) ·
-Customers/Suppliers (with real computed balances — see bug fix below) ·
-Payments · Cash registers · **Banks** (accounts, deposits/withdrawals,
-inter-account transfers) · Reports · Users · Settings · Expenses ·
-Documents (Supabase Storage) · print system · responsive redesign ·
-Batches + FEFO · Expiration tracking · Serial numbers · Warehouse
-transfers · Inventory count · Price lists + per-customer pricing ·
-**Write-offs/Брак** (documented stock removal with a reason) ·
-**Packaging deposits/Амбалаж** (given/returned per customer/supplier) ·
-**Customer orders** (draft → partial/full fulfillment, reuses `complete_sale()`
-internally so it gets the same atomicity + oversell protection) ·
-**Purchase requests** (auto-suggests restock quantities from live low-stock
-data) · **Unit conversions/Разфасовки** (schema + management, e.g. 1 box =
-12 pcs) · **`record_payment()`** (settle an existing sale/purchase balance
-after the fact — the "due-date account tracking" Aton describes).
+### Working right now (no extra setup beyond running the migrations)
 
-**Bug fixed this round:** `customers.balance` / `suppliers.balance` were
-stored columns nothing ever wrote to — every page silently showed 0.
-Replaced with `v_customer_balances` / `v_supplier_balances`, computed live
-from actual sales/purchases/payments, always correct by construction.
+Companies · Users/Roles/Permissions · Warehouses (add/edit) · Products
+(add/edit/delete, batch+serial flags) · Barcodes · Inventory · atomic stock
+movements · Dashboard · **POS** (customer selection, price-list pricing,
+serial capture, fiscal-adapter hook, **offline queue**) · Sales
+(view/print/void, **per-document-type printing with independent numbering
+series**) · Purchases (batch + serial capture, **unit conversions —
+"receive 2 boxes" computes 24 pcs**) · Customers (**groups**, group-level
+pricing, **per-customer product codes**, live balances) · Suppliers (live
+balances) · Payments · Cash registers · Banks · Expenses · Documents
+(Supabase Storage) · Batches + FEFO · Expiry tracking · Serial numbers ·
+Transfers · Inventory count · Price lists (customer + group level) ·
+Write-offs · Packaging deposits · Customer orders · Purchase requests ·
+**Returns** (customer + supplier, resellable vs damaged) ·
+**Multi-currency** (rates + conversion) · **In-app notifications**
+(low-stock fires automatically, once per crossing) · **Import/Export**
+(CSV in with preview/validation/duplicate detection, CSV out) · **Print
+template editor** ({{placeholder}} tokens) · **PWA** (installable, app
+shell cached offline) · responsive throughout.
 
-**On "connecting DevonThink":** still not possible directly (local macOS
-app, no public web API) — the Documents module remains the practical
-equivalent.
+### Written and ready, but needs a deploy step only you can do
 
-**Not yet built:**
+These are in `supabase/functions/`. They can't work from a static site
+because they need the `service_role` key, which must never be in frontend
+code (it bypasses all RLS):
 
-- Deep unit-conversion integration into the POS/Purchases cart (e.g.
-  "sell 2 boxes" auto-computing 24 pcs) — the conversions themselves are
-  stored, the cart UI doesn't use them yet
-- Distinct invoice/warranty-card/protocol document *types* with their own
-  numbering series — currently one shared print template, not per-type
-  Bulgarian legal document formats
-- Individual print template editor
-- Customer/product **groups** for group-level pricing (only per-customer
-  price lists exist, not group-level)
-- Per-customer product codes (spec §33)
-- Real multi-currency (exchange rates, conversion) — currency fields exist
-  but everything is effectively single-currency (EUR) in practice
-- Returns as a first-class flow (§61) — voiding a sale covers most of it
-- PDF export of print documents (still HTML print window → browser "Save as PDF")
-- Import/export (CSV/XLSX/JSON)
-- Report scheduler, auto-emailed reports — needs `pg_cron` + an Edge Function
-- Creating new login users from the UI — needs `service_role`, never in frontend
-- Notifications (in-app/email/SMS) — needs an Edge Function
-- PWA / offline queue
-- Peripheral hardware (fiscal devices, scales, card readers, price checkers,
-  route/delivery-trade mobile terminals) — no real hardware to build/test
-  against; would ship as unimplemented stubs, low value on their own
-- Add/Edit/Delete UI polish for Products/Warehouses (Customers/Suppliers now
-  show live balances but still lack inline edit; Sales/Write-offs/Transfers/
-  Customer Orders already have proper detail + action views)
+```bash
+supabase functions deploy create-user
+supabase functions deploy process-user-invites
+supabase functions deploy send-scheduled-reports
+supabase secrets set RESEND_API_KEY=your_key   # for the email ones
+```
 
-Same pattern as everywhere else for whatever comes next: a table + RLS
-policies + a page, or a `SECURITY DEFINER` RPC for anything needing
-atomicity. Tell me which module to build next.
+Then schedule `send-scheduled-reports` (Dashboard → Edge Functions → Cron,
+e.g. `0 8 * * *`). Until you do, the Автоматизация page still records
+schedules and invite requests — they just queue instead of sending.
+
+### Deliberately not done, and why
+
+- **Real fiscal device / scales / card readers / price checkers**
+  (`js/lib/fiscal-adapter.js`) — the *abstraction* is real and swappable
+  (spec §24 asks for exactly this), and a `MockFiscalDriver` ships so POS
+  works end to end. But there's no physical device here to develop or test
+  a real driver against, and each vendor's protocol differs. Writing one
+  blind would produce code that looks finished and fails on first contact
+  with hardware. Plug a real driver into the same three-method interface
+  and nothing else in the app changes.
+- **Server-generated PDF files** — printing produces a clean, purpose-built
+  print window (browser "Save as PDF" gives you a real PDF). True
+  server-side PDF generation needs a rendering service; the current path
+  covers the practical need without that dependency.
+- **Deep unit conversions in POS** — implemented for Purchases (receiving),
+  where they matter most. Selling in mixed units needs pricing rules per
+  unit that don't exist yet in the price-list schema.
+- **SMS notifications** — same Edge Function pattern as email; needs a
+  provider account (Twilio et al.) to be worth wiring.
+
+Everything above follows the same pattern as the rest of this codebase: a
+table + RLS policies + a page, or a `SECURITY DEFINER` RPC for anything
+needing atomicity.
