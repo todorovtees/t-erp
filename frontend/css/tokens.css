@@ -1,42 +1,79 @@
 /* ============================================================================
    T-ERP DESIGN TOKENS
    Direction: industrial / warehouse-labelling minimalism.
-   The system spends its entire day next to barcodes, pallet tags and
-   hi-vis signage — so the UI borrows that vocabulary instead of a generic
-   "SaaS dashboard" look: mono type for codes/numbers, a single hazard-amber
-   accent used only for attention states, hairline rules like tag borders.
+   The system spends its entire day next to barcodes, pallet tags and hi-vis
+   signage — so the UI borrows that vocabulary instead of a generic "SaaS
+   dashboard" look: mono type for codes/numbers, a single hazard-amber accent
+   used only for attention states, hairline rules like tag borders.
+
+   Mobile-first: every size below is tuned for a phone in a warehouse (often
+   one-handed, sometimes with gloves), then scaled up for desktop.
    ============================================================================ */
 
 :root {
   /* ---- Palette --------------------------------------------------------- */
-  --ink:           #14151A;   /* primary text / dark surfaces */
-  --charcoal:      #1E2025;   /* sidebar surface */
-  --charcoal-2:    #2A2D34;   /* sidebar hover/active */
-  --paper:         #FFFFFF;   /* main content surface */
-  --gray-50:       #F6F6F7;   /* app background */
+  --ink:           #14151A;
+  --charcoal:      #1E2025;
+  --charcoal-2:    #2A2D34;
+  --paper:         #FFFFFF;
+  --gray-50:       #F6F6F7;
   --gray-100:      #EDEDEF;
+  --gray-200:      #E2E3E6;
   --gray-300:      #D3D4D8;
   --gray-500:      #8B8D96;
   --gray-700:      #55575F;
-  --accent:        #E8A93A;   /* hazard-amber: alerts, focus, active tab */
-  --accent-ink:    #7A5A12;   /* accent text on light bg (AA contrast) */
+  --accent:        #E8A93A;
+  --accent-soft:   #FDF4E3;
+  --accent-ink:    #7A5A12;
   --good:          #2E7D5B;
+  --good-soft:     #E8F3EE;
   --bad:           #B3432E;
+  --bad-soft:      #FBECE8;
 
-  /* ---- Type -------------------------------------------------------------
-     Display/UI: IBM Plex Sans - technical, legible, not the default SaaS grotesk.
-     Data/codes: IBM Plex Mono - SKUs, barcodes, prices read like scanner output. */
-  --font-ui:   'IBM Plex Sans', -apple-system, sans-serif;
-  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+  /* ---- Type ------------------------------------------------------------
+     Fluid sizing: comfortable on a 360px phone, never oversized on desktop. */
+  --font-ui:   'IBM Plex Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', ui-monospace, monospace;
 
-  --radius-sm: 3px;
-  --radius-md: 6px;
+  --text-xs:  clamp(11px, 0.70rem + 0.1vw, 12px);
+  --text-sm:  clamp(12.5px, 0.78rem + 0.1vw, 13.5px);
+  --text-base: clamp(14px, 0.86rem + 0.15vw, 15px);
+  --text-lg:  clamp(16px, 0.95rem + 0.3vw, 18px);
+  --text-xl:  clamp(19px, 1.1rem + 0.6vw, 24px);
 
-  --sidebar-w: 232px;
+  /* ---- Spacing scale ---------------------------------------------------- */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+
+  /* Page gutter shrinks on phones so content isn't squeezed into a column. */
+  --gutter: clamp(12px, 3vw, 28px);
+
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+
+  --shadow-sm: 0 1px 2px rgba(20, 21, 26, 0.05);
+  --shadow-md: 0 2px 8px rgba(20, 21, 26, 0.08);
+  --shadow-lg: 0 12px 32px rgba(20, 21, 26, 0.18);
+
+  --sidebar-w: 240px;
   --topbar-h: 56px;
+
+  /* Minimum comfortable touch target (Apple/Google both recommend ~44px). */
+  --tap: 44px;
 }
 
 * { box-sizing: border-box; }
+
+html {
+  /* Stop iOS Safari from auto-inflating text in landscape. */
+  -webkit-text-size-adjust: 100%;
+}
 
 html, body {
   margin: 0;
@@ -44,25 +81,30 @@ html, body {
   background: var(--gray-50);
   color: var(--ink);
   font-family: var(--font-ui);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: var(--text-base);
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 .mono { font-family: var(--font-mono); font-variant-numeric: tabular-nums; }
 
-/* Responsive form grids: fixed column counts on desktop, single column once
-   the viewport gets tight (phones, and narrow desktop windows alike). */
+/* Responsive form grids — single column on phones, and any field can opt out
+   of spanning with .span-full. */
 .form-grid-2, .form-grid-3 {
-  padding: 16px;
+  padding: var(--sp-4);
   display: grid;
-  gap: 12px;
+  gap: var(--sp-3);
+  grid-template-columns: 1fr;
 }
-.form-grid-2 { grid-template-columns: repeat(2, 1fr); }
-.form-grid-3 { grid-template-columns: repeat(3, 1fr); }
-@media (max-width: 640px) {
-  .form-grid-2, .form-grid-3 { grid-template-columns: 1fr; }
+@media (min-width: 640px) {
+  .form-grid-2 { grid-template-columns: repeat(2, 1fr); }
+  .form-grid-3 { grid-template-columns: repeat(2, 1fr); }
 }
+@media (min-width: 960px) {
+  .form-grid-3 { grid-template-columns: repeat(3, 1fr); }
+}
+.span-full { grid-column: 1 / -1; }
 
 a { color: inherit; }
 
@@ -70,7 +112,8 @@ a { color: inherit; }
 
 :focus-visible {
   outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
 }
 
 @media (prefers-reduced-motion: reduce) {
