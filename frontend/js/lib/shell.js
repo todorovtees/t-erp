@@ -1,4 +1,5 @@
 import { supabase, requireSession } from './supabaseClient.js';
+import { initResponsiveTables } from './responsive-tables.js';
 
 const NAV = [
   { group: 'Общ преглед', items: [
@@ -136,6 +137,8 @@ export async function renderShell(activeKey) {
         }
       });
   }
+
+  initResponsiveTables();
 
   return {
     content: document.getElementById('app-content'),
