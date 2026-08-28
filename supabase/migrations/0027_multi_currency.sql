@@ -19,6 +19,18 @@ insert into currencies (code, name, symbol) values
   ('EUR', 'Euro', '€'), ('USD', 'US Dollar', '$'), ('GBP', 'British Pound', '£'), ('BGN', 'Bulgarian Lev', 'лв.')
 on conflict (code) do nothing;
 
+-- This is a global lookup table (currency codes), not tenant data — every
+-- company reads the same rows, so there's no company_id to scope by. RLS is
+-- still enabled: without it, PostgREST would expose the table to any key
+-- holder for writes as well as reads. The policy below grants read to
+-- logged-in users and nothing else, so the list can only be changed through
+-- a migration (or service_role), never by a client.
+alter table currencies enable row level security;
+
+create policy currencies_read on currencies for select
+  to authenticated
+  using (true);
+
 create table exchange_rates (
   id            uuid primary key default gen_random_uuid(),
   company_id    uuid not null references companies(id),
