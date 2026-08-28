@@ -721,6 +721,65 @@ textarea { min-height: 90px; resize: vertical; }
 }
 .cart-total span:last-child { font-family: var(--font-mono); }
 
+/* ---- Auth (login) ---------------------------------------------------------
+   Standalone screen — no shell, no sidebar. Centred card on desktop, full
+   width with breathing room on a phone. */
+
+.auth-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--sp-5) var(--gutter);
+  padding-top: calc(var(--sp-5) + env(safe-area-inset-top));
+  padding-bottom: calc(var(--sp-5) + env(safe-area-inset-bottom));
+  background: var(--gray-50);
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 400px;
+  background: var(--paper);
+  border: 1px solid var(--gray-100);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  padding: var(--sp-6) var(--sp-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.auth-card .mark {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  display: block;
+}
+
+/* The tagline sits directly under the wordmark, so kill the gap between them. */
+.auth-card .mark + .sub { margin-top: -14px; }
+
+.auth-card .btn { width: 100%; }
+
+/* ---- Inline form errors ---------------------------------------------------
+   Hidden until a message is written into it, so it takes no space when the
+   form is clean. */
+
+.form-error {
+  display: none;
+  background: var(--bad-soft);
+  border: 1px solid rgba(179, 67, 46, 0.25);
+  color: var(--bad);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: var(--text-sm);
+  line-height: 1.4;
+}
+.form-error:not(:empty) { display: block; }
+
 /* ---- Print ---------------------------------------------------------------- */
 
 @media print {
